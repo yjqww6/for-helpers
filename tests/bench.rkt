@@ -20,20 +20,6 @@
                                   (in-range 1500 2000)))])
      a))
 
-
-  (bench
-   (for ([a (in-filtered
-             values
-             (in-mapped
-              cons
-              (in-mapped cons
-                         (in-range 500)
-                         (in-range 500 1000))
-              (in-mapped cons
-                         (in-range 1000 1500)
-                         (in-range 1500 2000))))])
-     a))
-
   (bench
    (for ([a
           (in-filtered
