@@ -1,14 +1,25 @@
 #lang racket
 
 (module+ main
-  (require "../main.rkt")
-  (define-syntax-rule (bench form)
-    (begin
-      (collect-garbage)
-      (collect-garbage)
-      (time
-       (for ([_ (in-range 100000)])
-         form))))
+  (require "../private/main.rkt" "../main.rkt")
+  
+  (define-syntax (bench stx)
+    (syntax-case stx ()
+      [(_ form)
+       (let ()
+         (with-syntax ([(form ...)
+                        (list (parameterize ([current-optimize values])
+                                (local-expand #'form 'expression '()))
+                              (local-expand #'form 'expression '()))])
+           #'(begin
+               (begin
+                 (collect-garbage)
+                 (collect-garbage)
+                 (time
+                  (for ([_ (in-range 100000)])
+                    form)))
+               ...
+               (newline))))]))
 
   (bench
    (for ([a (in-mapped cons
@@ -39,18 +50,22 @@
      (void)))
 
   (bench
-   (for ([a (in-mapped
-                  (λ (x) (+ 2 x))
-                  (in-filtered
-                   odd?
+   (for ([a (in-filtered
+             positive?
+             (in-filtered
+              even?
+              (in-mapped
+               (λ (x) (- x 1))
+               (in-mapped
+                (λ (x) (- x 1))
+                (in-filtered
+                 positive?
+                 (in-filtered
+                  even?
+                  (in-mapped
+                   (λ (x) (- x 1))
                    (in-mapped
-                    (λ (x) (+ 2 x))
-                    (in-filtered
-                     odd?
-                     (in-mapped
-                      (λ (x) (+ 2 x))
-                      (in-filtered
-                       odd?
-                       (in-range 1000)))))))])
+                    (λ (x) (- x 1))
+                    (in-range 1000)))))))))])
      a))
   )
