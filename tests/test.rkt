@@ -87,21 +87,21 @@
    '((2) (4)))
 
   (check-equal?
-   (for/list ([a (in-filtered
-                  values
-                  (in-mapped
-                   (λ (x) (and (odd? x) (+ 2 x)))
-                   (in-filtered
-                    values
-                    (in-mapped
-                     (λ (x) (and (odd? x) (+ 2 x)))
-                     (in-filtered
-                      values
-                      (in-mapped
-                       (λ (x) (and (odd? x) (+ 2 x)))
+   (for/list ([a (in-mapped
+                  (λ (x) (* 2 x))
+                  (in-filtered
+                   odd?
+                   (in-mapped
+                    (λ (x) (+ 2 x))
+                    (in-filtered
+                     odd?
+                     (in-mapped
+                      (λ (x) (+ 2 x))
+                      (in-filtered
+                       odd?
                        (in-range 1000)))))))])
      a)
-   (map (λ (x) (+ 2 x))
+   (map (λ (x) (* 2 x))
         (filter odd?
                 (map (λ (x) (+ 2 x))
                      (filter odd?
