@@ -2,7 +2,7 @@
 
 (require (for-syntax racket/base syntax/parse racket/list
                      syntax/stx syntax/unsafe/for-transform
-                     "aux.rkt"))
+                     "helper.rkt"))
 (provide in-mapped in-filtered in-filter-mapped
          (for-syntax current-optimize))
 

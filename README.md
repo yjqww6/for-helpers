@@ -1,3 +1,3 @@
 for-helpers
 ===========
-README text here.
+Helper macros for racket for macros to avoid temporary sequences
