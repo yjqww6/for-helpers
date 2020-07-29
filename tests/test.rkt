@@ -57,4 +57,14 @@
                               (in-range 15 20))])
        a)
      l))
+
+  (check-equal?
+   (for/list ([a (in-mapped add1
+                            (in-filtered odd?
+                                         (in-mapped add1
+                                                    (in-range 10))))])
+     a)
+   (map add1 (filter odd?
+                     (map add1
+                          (range 10)))))
   )

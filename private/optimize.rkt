@@ -42,12 +42,8 @@
      (define procedure (make-procedure #'proc (syntax->list #'(S ...))))
      #`[(Id) (in-filter-mapped #,procedure #,@(reverse clauses))]]
     
-    [[(Id:id) ((~literal in-filtered) Pred:expr ((~literal in-mapped) Proc:expr S:expr ...+))]
-     #:with (proc pred p) (generate-temporaries #'(Proc Pred P))
-     #:with (v ...) (generate-temporaries #'(S ...))
-     (set! bindings (list* #'[p (λ (v ...) (pred (proc v ...)))] #'[pred Pred] #'[proc Proc] bindings))
-     (define procedure (make-procedure #'p (syntax->list #'(S ...))))
-     #`[(Id) (in-filter-mapped #,procedure #,@(reverse clauses))]]
+    [[(Id:id) ((~literal in-filtered) (~literal values) ((~literal in-mapped) Proc:expr S:expr ...+))]
+     (optimize-mapped #'[(Id) (in-filter-mapped Proc S ...)])]
     
     [_ form]))
 
