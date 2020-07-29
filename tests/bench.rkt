@@ -37,4 +37,20 @@
                          (in-range 1000 1500)
                          (in-range 1500 2000))))))])
      (void)))
+
+  (bench
+   (for ([a (in-filtered
+             values
+             (in-mapped
+              (λ (x) (and (odd? x) (+ 2 x)))
+              (in-filtered
+               values
+               (in-mapped
+                (λ (x) (and (odd? x) (+ 2 x)))
+                (in-filtered
+                 values
+                 (in-mapped
+                  (λ (x) (and (odd? x) (+ 2 x)))
+                  (in-range 1000)))))))])
+     a))
   )

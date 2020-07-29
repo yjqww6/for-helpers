@@ -85,4 +85,26 @@
                                           '(a () a () a))))])
      l)
    '((2) (4)))
+
+  (check-equal?
+   (for/list ([a (in-filtered
+                  values
+                  (in-mapped
+                   (λ (x) (and (odd? x) (+ 2 x)))
+                   (in-filtered
+                    values
+                    (in-mapped
+                     (λ (x) (and (odd? x) (+ 2 x)))
+                     (in-filtered
+                      values
+                      (in-mapped
+                       (λ (x) (and (odd? x) (+ 2 x)))
+                       (in-range 1000)))))))])
+     a)
+   (map (λ (x) (+ 2 x))
+        (filter odd?
+                (map (λ (x) (+ 2 x))
+                     (filter odd?
+                             (map (λ (x) (+ 2 x))
+                                  (filter odd? (range 1000))))))))
   )
