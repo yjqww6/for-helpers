@@ -69,14 +69,3 @@ Helper macros for racket for macros to avoid temporary sequences.
                       [b (in-filtered even? (in-range 5))])
              (cons a b))]
 }
-
-@defform[(in-filter-mapped pred sequence ...+)]{
- Returns a sequence similar to
- @racket[(in-filtered values (in-mapped pred sequence ...))].
- 
- This Macro cannot be used outside @racket[for] clauses.
-
- @examples[#:eval my-evaluator
-           (for/list ([a (in-filter-mapped (λ (x) (and (odd? x) (add1 x))) (in-range 5))])
-             a)]
-}

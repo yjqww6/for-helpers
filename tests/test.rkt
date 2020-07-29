@@ -31,8 +31,7 @@
   (check-equal?
    (for/list ([a (in-filtered values (in-mapped even? (in-range 10)))])
      a)
-   (for/list ([a (in-filter-mapped even? (in-range 10))])
-     a))
+   (filter-map even? (range 10)))
 
   (let ([l 
          (map cons
@@ -67,4 +66,23 @@
    (map add1 (filter odd?
                      (map add1
                           (range 10)))))
+
+  (check-equal?
+   (for/list ([l (in-filtered
+                  list?
+                  (in-mapped cons
+                             '(1 2 3 4 5)
+                             '(a () a () a)))])
+     l)
+   '((2) (4)))
+
+  (check-equal?
+   (for/list ([l (in-filtered values
+                              (in-filtered
+                               list?
+                               (in-mapped cons
+                                          '(1 2 3 4 5)
+                                          '(a () a () a))))])
+     l)
+   '((2) (4)))
   )

@@ -3,7 +3,7 @@
 (require (for-syntax racket/base syntax/parse racket/list
                      syntax/stx syntax/unsafe/for-transform
                      "helper.rkt"))
-(provide in-mapped in-filtered in-filter-mapped
+(provide in-mapped in-filtered
          (for-syntax current-optimize))
 
 (define-for-syntax current-optimize (make-parameter values))
@@ -53,6 +53,7 @@
         #:with (inner-loop-id ...) (remove-duplicates (syntax->list #'(inner-id ... ... loop-id ...))
                                                       bound-identifier=?)
         #:with (falsy ...) (stx-map (λ (_) #'#f) #'(inner-loop-id ...))
+        #:with (next) (generate-temporaries '(next))
         (for-clause-syntax-protect
          #'[(Id ...)
             (:do-in
@@ -88,65 +89,12 @@
 
              (loop-arg ...)
              )])])]
-    [[(Id:id) ((~literal in-filter-mapped) Proc S ...+)]
-     #:with (Tmp ...) (generate-temporaries #'(S ...))
-     (syntax-parse (compose-single-valued #'(Tmp ...) #'(S ...))
-       [(([(outer-id ...) outer-expr] ...)
-         outer-check
-         ([loop-id loop-expr] ...)
-         pos-guard
-         ([(inner-id ...) inner-expr] ...)
-         pre-guard
-         post-guard
-         (loop-arg ...))
-        #:with (inner-loop-id ...) (remove-duplicates (syntax->list #'(inner-id ... ... loop-id ...))
-                                                      bound-identifier=?)
-        #:with (falsy ...) (stx-map (λ (_) #'#f) #'(inner-loop-id ...))
-        (for-clause-syntax-protect
-         #'[(Id)
-            (:do-in
-              
-             ([(next outer-id ... ...)
-               (let-values ([(outer-id ...) outer-expr] ...
-                            [(proc) Proc])
-                 (define (next loop-id ...)
-                   (if pos-guard
-                       (let-values ([(inner-id ...) inner-expr] ...)
-                         (if pre-guard
-                             (let ([Id (proc Tmp ...)])
-                               (if Id
-                                   (values Id inner-loop-id ...)
-                                   (if post-guard
-                                       (next loop-arg ...)
-                                       (values #f falsy ...))))
-                             (values #f falsy ...)))
-                       (values #f falsy ...)))
-                 outer-check
-                 (values next outer-id ... ...))])
-
-             (void)
-
-             ([loop-id loop-expr] ...)
-
-             #t
-
-             ([(Id inner-loop-id ...) (next loop-id ...)])
-
-             Id
-
-             post-guard
-
-             (loop-arg ...)
-             )])])]))
+    ))
 
 (define-sequence-syntax in-mapped
   (syntax-rules ())
   expand)
 
 (define-sequence-syntax in-filtered
-  (syntax-rules ())
-  expand)
-
-(define-sequence-syntax in-filter-mapped
   (syntax-rules ())
   expand)

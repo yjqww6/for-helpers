@@ -7,23 +7,17 @@
       (collect-garbage)
       (collect-garbage)
       (time
-       (for ([_ (in-range 1000000)])
+       (for ([_ (in-range 100000)])
          form))))
 
-  #;
-  (bench
-   (map cons
-        (map cons (range 50) (range 50 100))
-        (map cons (range 100 150) (range 150 200))))
-  
   (bench
    (for ([a (in-mapped cons
                        (in-mapped cons
-                                  (in-range 50)
-                                  (in-range 50 100))
+                                  (in-range 500)
+                                  (in-range 500 1000))
                        (in-mapped cons
-                                  (in-range 100 150)
-                                  (in-range 150 200)))])
+                                  (in-range 1000 1500)
+                                  (in-range 1500 2000)))])
      a))
 
 
@@ -33,10 +27,28 @@
              (in-mapped
               cons
               (in-mapped cons
-                         (in-range 50)
-                         (in-range 50 100))
+                         (in-range 500)
+                         (in-range 500 1000))
               (in-mapped cons
-                         (in-range 100 150)
-                         (in-range 150 200))))])
+                         (in-range 1000 1500)
+                         (in-range 1500 2000))))])
      a))
+
+  (bench
+   (for ([a
+          (in-filtered
+           even?
+           (in-filtered
+            even?
+            (in-filtered
+             even?
+             (in-mapped
+              +
+              (in-mapped +
+                         (in-range 500)
+                         (in-range 500 1000))
+              (in-mapped +
+                         (in-range 1000 1500)
+                         (in-range 1500 2000))))))])
+     (void)))
   )
