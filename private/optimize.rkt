@@ -7,10 +7,6 @@
   
   (syntax-parse form
     [[(Id:id ...) ((~literal in-mapped) Proc:expr S:expr ...+)]
-     #:when (for/or ([s (in-syntax #'(S ...))])
-              (syntax-parse s
-                [((~literal in-mapped) . _) #t]
-                [else #f]))
      #:with (proc) (generate-temporaries #'(Proc))
      
      (define params '())
@@ -40,47 +36,41 @@
   
      (set! bindings (cons #'[proc Proc] bindings))
      (define procedure (make-procedure #'proc (syntax->list #'(S ...))))
-     (optimize
-      #`[(Id ...) (in-mapped #,procedure #,@(reverse clauses))])]
+     #`[(Id ...) (in-mapped #,procedure #,@(reverse clauses))]]
 
     [[(Id:id) ((~literal in-filtered)
-               Pred0:expr
+               (~literal values)
                ((~literal in-mapped)
                 Proc0:expr
                 ((~literal in-filtered)
-                 Pred1:expr
+                 (~literal values)
                  ((~literal in-mapped)
                   Proc1:expr
                   S:expr))))]
-     #:with (pred0 pred1 proc0 proc1) (generate-temporaries #'(Pred0 Pred1 Proc0 Proc1))
+     #:with (proc0 proc1) (generate-temporaries #'(Proc0 Proc1))
      #:do
-     [(define preds (list #'[pred1 Pred1] #'[pred0 Pred0]))
-      (define procs (list #'[proc1 Proc1] #'[proc0 Proc0]))]
+     [(define bindings (list #'[proc1 Proc1] #'[proc0 Proc0]))]
      #:with S^
      (let loop ([s #'S])
        (syntax-parse s
          [((~literal in-filtered)
-           Pred:expr
+           (~literal values)
            ((~literal in-mapped)
             Proc:expr
             S:expr))
-          #:with (pred proc) (generate-temporaries #'(Pred Proc))
-          (set! procs (cons #'[proc Proc] procs))
-          (set! preds (cons #'[pred Pred] preds))
+          #:with (proc) (generate-temporaries #'(Proc))
+          (set! bindings (cons #'[proc Proc] bindings))
           (loop #'S)]
          [else s]))
-     #:with [(proc Proc) ...] procs
-     #:with [(pred Pred) ...] preds
-     (optimize
-      #'[(Id)
-         (in-filtered values
-                      (in-mapped (let ([proc Proc] ...
-                                       [pred Pred] ...)
-                                   (λ (v)
-                                     (let ([a v])
-                                       (and-let* ([a pred (proc a)] ...)
-                                                 a))))
-                                 S^))])]
+     #:with [(proc Proc) ...] (reverse bindings)
+     #'[(Id)
+        (in-filtered values
+                     (in-mapped (let ([proc Proc] ...)
+                                  (λ (v)
+                                    (let ([a v])
+                                      (and-let* ([a (proc a)] ...)
+                                                a))))
+                                S^))]]
 
     [[(Id:id) ((~literal in-filtered) Pred:expr (~and S:expr ((~literal in-filtered) . _)))]
      #:with (pred) (generate-temporaries #'(Pred))
@@ -95,12 +85,11 @@
             ]
            [else
             s])))
-     (with-syntax ([([pred Pred] ...) bindings])
-       (optimize
-        #`[(Id) (in-filtered (let ([pred Pred] ...)
-                               (λ (v)
-                                 (and (pred v) ...)))
-                             #,clause)]))]
+     (with-syntax ([([pred Pred] ...) (reverse bindings)])
+       #`[(Id) (in-filtered (let ([pred Pred] ...)
+                              (λ (v)
+                                (and (pred v) ...)))
+                            #,clause)])]
     
     [_ form]))
 

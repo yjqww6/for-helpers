@@ -51,21 +51,17 @@
 
   (bench
    (for ([a (in-filtered
-             positive?
-             (in-filtered
-              even?
-              (in-mapped
-               (λ (x) (- x 1))
+            values
+             (in-mapped
+              (λ (x) (and (odd? x) (+ 2 x)))
+              (in-filtered
+               values
                (in-mapped
-                (λ (x) (- x 1))
+                (λ (x) (and (odd? x) (+ 2 x)))
                 (in-filtered
-                 positive?
-                 (in-filtered
-                  even?
-                  (in-mapped
-                   (λ (x) (- x 1))
-                   (in-mapped
-                    (λ (x) (- x 1))
-                    (in-range 1000)))))))))])
+                 values
+                 (in-mapped
+                  (λ (x) (and (odd? x) (+ 2 x)))
+                  (in-range 1000)))))))])
      a))
   )
