@@ -69,32 +69,31 @@
      #:with (pred Tmp ...) (generate-temporaries #'(Pred Id ...))
      #:with (False ...) (stx-map (λ (_) #'#f) #'(Id ...))
      #:do [(define-values (params clauses) (values '() '()))]
-     (optimize
-      (with-Ps (mc mp)
-        (define (recur s)
-          (syntax-parse s
-            [((~literal in-mapped) Proc:expr S:expr ...+)
-             #:with (proc) (generate-temporaries #'(Proc))
-             (with-C ([k mp])
-               #`(let ([proc Proc])
-                   #,(with-Ps (mp)
-                       (k #`(proc #,@(stx-map recur #'(S ...)))))))]
-            [else
-             #:with (Tmp) (generate-temporaries #'(tmp))
-             (set! params (cons #'Tmp params))
-             (set! clauses (cons s clauses))
-             #'Tmp]))
-        (define l (stx-map recur #'(S ...)))
-        (with-C ([k mp] [kc mc])
-          #`[(Id ...) (in-filter&map
-                       (let ([pred Pred])
-                         #,(kc #`(λ #,(reverse params)
-                                   (let-values ([(Tmp ...) (values #,@(k l))])
-                                     (if (pred Tmp ...)
-                                         (values #t Tmp ...)
-                                         (values #f False ...))))))
-                       #,@(reverse clauses))])
-        ))]
+     (with-Ps (mc mp)
+       (define (recur s)
+         (syntax-parse s
+           [((~literal in-mapped) Proc:expr S:expr ...+)
+            #:with (proc) (generate-temporaries #'(Proc))
+            (with-C ([k mp])
+              #`(let ([proc Proc])
+                  #,(with-Ps (mp)
+                      (k #`(proc #,@(stx-map recur #'(S ...)))))))]
+           [else
+            #:with (Tmp) (generate-temporaries #'(tmp))
+            (set! params (cons #'Tmp params))
+            (set! clauses (cons s clauses))
+            #'Tmp]))
+       (define l (stx-map recur #'(S ...)))
+       (with-C ([k mp] [kc mc])
+         #`[(Id ...) (in-filter&map
+                      (let ([pred Pred])
+                        #,(kc #`(λ #,(reverse params)
+                                  (let-values ([(Tmp ...) (values #,@(k l))])
+                                    (if (pred Tmp ...)
+                                        (values #t Tmp ...)
+                                        (values #f False ...))))))
+                      #,@(reverse clauses))])
+       )]
 
     ;;nested single-valued in-filtered and in-mapped
     [[(Id:id) (~and S:expr
