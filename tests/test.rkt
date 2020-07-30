@@ -107,4 +107,24 @@
                      (filter odd?
                              (map (λ (x) (+ 2 x))
                                   (filter odd? (range 1000))))))))
+
+  (check-equal?
+   (for/list ([a (in-mapped
+                  (λ (x) (* 2 x))
+                  (in-filtered
+                   odd?
+                   (in-mapped
+                    (λ (x) (+ 2 x))
+                    (in-filtered
+                     odd?
+                     (in-mapped
+                      (λ (x) (+ 2 x))
+                      (in-filtered odd? (in-range 1000)))))))])
+     a)
+   (map (λ (x) (* 2 x))
+        (filter odd?
+                (map (λ (x) (+ 2 x))
+                     (filter odd?
+                             (map (λ (x) (+ 2 x))
+                                  (filter odd? (range 1000))))))))
   )

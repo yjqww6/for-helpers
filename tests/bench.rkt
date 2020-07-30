@@ -51,7 +51,7 @@
 
   (bench
    (for ([a (in-filtered
-            values
+             values
              (in-mapped
               (λ (x) (and (odd? x) (+ 2 x)))
               (in-filtered
@@ -63,5 +63,19 @@
                  (in-mapped
                   (λ (x) (and (odd? x) (+ 2 x)))
                   (in-range 1000)))))))])
+     a))
+
+  (bench
+   (for ([a (in-mapped
+             (λ (x) (* 2 x))
+             (in-filtered
+              odd?
+              (in-mapped
+               (λ (x) (+ 2 x))
+               (in-filtered
+                odd?
+                (in-mapped
+                 (λ (x) (+ 2 x))
+                 (in-filtered odd? (in-range 1000)))))))])
      a))
   )

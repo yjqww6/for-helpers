@@ -3,93 +3,111 @@
          (for-template racket/base "main.rkt" "and-let.rkt")
          racket/control)
 
+(define mp (make-continuation-prompt-tag))
+(define mc (make-continuation-prompt-tag))
+(define key (make-continuation-mark-key))
+
+(define-syntax with-Ps
+  (syntax-rules ()
+    [(_ () body ...)
+     (let () body ...)]
+    [(_ (p p* ...) body ...)
+     (prompt-at p (with-Ps (p* ...) body ...))]))
+
+(define-syntax with-C
+  (syntax-rules ()
+    [(_ () body ...)
+     (let () body ...)]
+    [(_ ([k p] . r) body ...)
+     (control-at p k (with-C r body ...))]))
+
 (define (optimize form)
-  
   (syntax-parse form
     [[(Id:id ...) ((~literal in-mapped) Proc:expr S:expr ...+)]
+     #:when (for/or ([s (in-syntax #'(S ...))])
+              (syntax-parse s
+                [((~literal in-mapped) . _) #t]
+                [else #f]))
      #:with (proc) (generate-temporaries #'(Proc))
-     
-     (define params '())
-     (define clauses '())
-     (define bindings '())
-     (define (make-procedure proc s)
-       (let ()
-         (define body
-           #`(#,proc #,@(let recur ([s s])
-                          (cond
-                            [(null? s) '()]
-                            [else
-                             (syntax-parse (car s)
-                               [((~literal in-mapped) Proc^:expr S^ ...+)
-                                #:with (proc) (generate-temporaries #'(Proc^))
-                                (set! bindings (cons #'[proc Proc^] bindings))
-                                (cons #`(proc #,@(recur (syntax->list #'(S^ ...))))
-                                      (recur (cdr s)))]
-                               [_
-                                #:with (tmp) (generate-temporaries '(tmp))
-                                (set! params (cons #'tmp params))
-                                (set! clauses (cons (car s) clauses))
-                                (cons #'tmp (recur (cdr s)))])]))))
-         #`(let* #,(reverse bindings)
-             (λ #,(reverse params)
-               #,body))))
-  
-     (set! bindings (cons #'[proc Proc] bindings))
-     (define procedure (make-procedure #'proc (syntax->list #'(S ...))))
-     #`[(Id ...) (in-mapped #,procedure #,@(reverse clauses))]]
+     #:do [(define-values (params clauses) (values '() '()))]
+     (optimize
+      (with-Ps (mc mp)
+        (define procedure
+          (let recur ([s #'(in-mapped Proc S ...)])
+            (syntax-parse s
+              [((~literal in-mapped) Proc:expr S:expr ...+)
+               #:with (proc) (generate-temporaries #'(Proc))
+               (with-C ([k mp])
+                 #`(let ([proc Proc])
+                     #,(with-Ps (mp)
+                         (k #`(proc #,@(stx-map recur #'(S ...)))))))]
+              [else
+               #:with (Tmp) (generate-temporaries #'(tmp))
+               (set! params (cons #'Tmp params))
+               (set! clauses (cons s clauses))
+               (with-C ([k mp])
+                 (with-Ps (mp) (k #'Tmp)))])))
+        (with-C ([k mp] [kc mc])
+          #`[(Id ...) (in-mapped #,(kc #`(λ #,(reverse params)
+                                           #,(k procedure)))
+                                 #,@(reverse clauses))])))]
 
-    [[(Id:id) ((~literal in-filtered)
-               (~literal values)
-               ((~literal in-mapped)
-                Proc0:expr
-                ((~literal in-filtered)
-                 (~literal values)
-                 ((~literal in-mapped)
-                  Proc1:expr
-                  S:expr))))]
-     #:with (proc0 proc1) (generate-temporaries #'(Proc0 Proc1))
-     #:do
-     [(define bindings (list #'[proc1 Proc1] #'[proc0 Proc0]))]
-     #:with S^
-     (let loop ([s #'S])
-       (syntax-parse s
-         [((~literal in-filtered)
-           (~literal values)
-           ((~literal in-mapped)
-            Proc:expr
-            S:expr))
-          #:with (proc) (generate-temporaries #'(Proc))
-          (set! bindings (cons #'[proc Proc] bindings))
-          (loop #'S)]
-         [else s]))
-     #:with [(proc Proc) ...] bindings
-     #'[(Id)
-        (in-filtered values
-                     (in-mapped (let ([proc Proc] ...)
-                                  (λ (v)
-                                    (let ([a v])
-                                      (and-let* ([a (proc a)] ...)
-                                                a))))
-                                S^))]]
+    [[(Id:id) (~and S:expr
+                    (~or* ((~literal in-filtered)
+                           _
+                           ((~literal in-mapped) _ _))
+                          ((~literal in-mapped)
+                           _
+                           ((~literal in-filtered) _ _))))]
+     #:with (v) (generate-temporaries #'(v))
+     (with-Ps (mc mp)
+       (let loop ([s #'S] [tail #t])
+         (syntax-parse s
+           [((~literal in-mapped) Proc:expr S:expr)
+            #:with (proc) (generate-temporaries #'(Proc))
+            (with-C ([k mp])
+              #`(let ([proc Proc])
+                  #,(with-Ps (mp)
+                      (if tail
+                          (k #`(values #t (proc #,(loop #'S #f))))
+                          (k #`(proc #,(loop #'S #f)))))))]
+           [((~literal in-filtered) Pred:expr S:expr)
+            #:with (tmp pred) (generate-temporaries #'(tmp Pred))
+            (with-C ([k mp])
+              #`(let ([pred Pred])
+                  #,(with-Ps (mp)
+                      #`(let ([tmp #,(loop #'S #f)])
+                          (if (pred tmp)
+                              #,(if tail
+                                    (k #'(values #t tmp))
+                                    (k #'tmp))
+                              (values #f #f))))))]
+           [else
+            (with-C ([k mp] [kc mc])
+              #`[(Id)
+                 (in-filter&map
+                  #,(kc #`(λ (v)
+                            #,(k #'v)))
+                  #,s)])])))]
 
     [[(Id:id) ((~literal in-filtered) Pred:expr (~and S:expr ((~literal in-filtered) . _)))]
-     #:with (pred) (generate-temporaries #'(Pred))
-     (define bindings (list #'[pred Pred]))
-     (define clause
-       (let loop ([s #'S])
-         (syntax-parse s
-           [((~literal in-filtered) Pred:expr S:expr)
-            #:with (pred) (generate-temporaries #'(Pred))
-            (set! bindings (cons #'[pred Pred] bindings))
-            (loop #'S)
-            ]
-           [else
-            s])))
-     (with-syntax ([([pred Pred] ...) bindings])
-       #`[(Id) (in-filtered (let ([pred Pred] ...)
-                              (λ (v)
-                                (and (pred v) ...)))
-                            #,clause)])]
+     #:with (pred v) (generate-temporaries #'(Pred v))
+     (optimize
+      (with-Ps (mc mp)
+        (let loop ([s #'(in-filtered Pred S)])
+          (syntax-parse s
+            [((~literal in-filtered) Pred:expr S:expr)
+             #:with (pred) (generate-temporaries #'(Pred))
+             (with-C ([k mp])
+               #`(let ([pred Pred])
+                   #,(with-Ps (mp)
+                       (k (cons #'(pred v)
+                                (loop #'S))))))]
+            [else
+             (with-C ([kp mp] [kc mc])
+               #`[(Id) (in-filtered
+                        #,(kc #`(λ (v) (and #,@(reverse (kp '())))))
+                        #,s)])]))))]
     
     [_ form]))
 
