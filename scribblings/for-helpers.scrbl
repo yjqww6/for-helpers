@@ -1,5 +1,5 @@
 #lang scribble/manual
-@require[@for-label["../main.rkt"
+@require[@for-label["../main.rkt" syntax/unsafe/for-transform
                     racket/base
                     racket/generator]
          racket/sandbox scribble/example racket/runtime-path]
@@ -10,6 +10,8 @@
 @defmodule[for-helpers]
 
 Helper macros for racket for macros to avoid temporary sequences.
+
+@section{APIs}
 
 @(define-runtime-path main "../main.rkt")
 @(define my-evaluator
@@ -27,9 +29,9 @@ Helper macros for racket for macros to avoid temporary sequences.
                    (call-with-values
                     (λ () (p s ...))
                     yield))))]
- , without touching continuations or building temporary sequences.
+ , without touching continuations or building intermediate sequences.
  
- This Macro cannot be used outside @racket[for] clauses.
+ This macro cannot be used outside @racket[for] clauses.
 
  @examples[#:eval my-evaluator
            (for/list ([(a b)
@@ -53,12 +55,10 @@ Helper macros for racket for macros to avoid temporary sequences.
                (let ([p pred])
                  (for ([s sequence] ...
                        #:when (p s ...))
-                   (call-with-values
-                    (λ () (values s ...))
-                    yield))))]
- , without touching continuations or building temporary sequences.
+                   (yield s ...))))]
+ , without touching continuations or building intermediate sequences.
  
- This Macro cannot be used outside @racket[for] clauses.
+ This macro cannot be used outside @racket[for] clauses.
 
  @examples[#:eval my-evaluator
            (for/list ([(a b) (in-filtered <
@@ -69,3 +69,18 @@ Helper macros for racket for macros to avoid temporary sequences.
                       [b (in-filtered even? (in-range 5))])
              (cons a b))]
 }
+
+@section{Performance Notes}
+@(require (for-label racket/list))
+@(define in-filter-mapped #f)
+
+Due to the limitations of code structures of @racket[:do-in],
+these macros do not compose well without optimizations.
+This package does optimize nested forms, which should cover most use cases.
+See @italic{tests/bench.rkt}.
+
+Currently, there are no @racket[in-filter-mapped] like @racket[filter-map],
+since it expands to @racket[(in-filtered values (in-mapped _ ...))]
+and there are no @italic{stop-ids} parameters for @racket[expand-for-clause] for partial expansion.
+Therefore it is not suggested to define something like @racket[in-filter-mapped]
+and then write @racket[(in-filtered _ (in-filter-mapped _ (in-mapped _ _)))].
