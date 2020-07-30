@@ -62,7 +62,7 @@
           (set! bindings (cons #'[proc Proc] bindings))
           (loop #'S)]
          [else s]))
-     #:with [(proc Proc) ...] (reverse bindings)
+     #:with [(proc Proc) ...] bindings
      #'[(Id)
         (in-filtered values
                      (in-mapped (let ([proc Proc] ...)
@@ -85,7 +85,7 @@
             ]
            [else
             s])))
-     (with-syntax ([([pred Pred] ...) (reverse bindings)])
+     (with-syntax ([([pred Pred] ...) bindings])
        #`[(Id) (in-filtered (let ([pred Pred] ...)
                               (λ (v)
                                 (and (pred v) ...)))
