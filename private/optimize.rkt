@@ -51,50 +51,6 @@
                                            #,(k procedure)))
                                  #,@(reverse clauses))])))]
 
-    ;; non-single-valued in-mapped inside in-filtered
-    [[(Id:id ...) ((~literal in-filtered) Pred:expr S:expr ...+)]
-     #:when (let loop ([s #'(S ...)])
-              (define ls (syntax->list s))
-              (cond
-                [(> (length ls) 1)
-                 (for/or ([s (in-list ls)])
-                   (syntax-case s (in-mapped)
-                     [(in-mapped . _) #t]
-                     [else #f]))]
-                [else
-                 (syntax-parse ls
-                   [(((~literal in-mapped) _ S ...+))
-                    (loop #'(S ...))]
-                   [else #f])]))
-     #:with (pred Tmp ...) (generate-temporaries #'(Pred Id ...))
-     #:with (False ...) (stx-map (λ (_) #'#f) #'(Id ...))
-     #:do [(define-values (params clauses) (values '() '()))]
-     (with-Ps (mc mp)
-       (define (recur s)
-         (syntax-parse s
-           [((~literal in-mapped) Proc:expr S:expr ...+)
-            #:with (proc) (generate-temporaries #'(Proc))
-            (with-C ([k mp])
-              #`(let ([proc Proc])
-                  #,(with-Ps (mp)
-                      (k #`(proc #,@(stx-map recur #'(S ...)))))))]
-           [else
-            #:with (Tmp) (generate-temporaries #'(tmp))
-            (set! params (cons #'Tmp params))
-            (set! clauses (cons s clauses))
-            #'Tmp]))
-       (define l (stx-map recur #'(S ...)))
-       (with-C ([k mp] [kc mc])
-         #`[(Id ...) (in-filter&map
-                      (let ([pred Pred])
-                        #,(kc #`(λ #,(reverse params)
-                                  (let-values ([(Tmp ...) (values #,@(k l))])
-                                    (if (pred Tmp ...)
-                                        (values #t Tmp ...)
-                                        (values #f False ...))))))
-                      #,@(reverse clauses))])
-       )]
-
     ;;nested single-valued in-filtered and in-mapped
     [[(Id:id) (~and S:expr
                     (~or* ((~literal in-filtered)
