@@ -22,6 +22,7 @@
 
 (define (optimize form)
   (syntax-parse form
+    ;;nested in-mapped, multiple values handled
     [[(Id:id ...) ((~literal in-mapped) Proc:expr S:expr ...+)]
      #:when (for/or ([s (in-syntax #'(S ...))])
               (syntax-parse s
@@ -50,11 +51,21 @@
                                            #,(k procedure)))
                                  #,@(reverse clauses))])))]
 
-    [[(Id:id ...) ((~literal in-filtered) Pred:expr (~between S:expr 2 +inf.0) ...)]
-     #:when (for/or ([s (in-syntax #'(S ...))])
-              (syntax-parse s
-                [((~literal in-mapped) . _) #t]
-                [else #f]))
+    ;; non-single-valued in-mapped inside in-filtered
+    [[(Id:id ...) ((~literal in-filtered) Pred:expr S:expr ...+)]
+     #:when (let loop ([s #'(S ...)])
+              (define ls (syntax->list s))
+              (cond
+                [(> (length ls) 1)
+                 (for/or ([s (in-list ls)])
+                   (syntax-case s (in-mapped)
+                     [(in-mapped . _) #t]
+                     [else #f]))]
+                [else
+                 (syntax-parse ls
+                   [(((~literal in-mapped) _ S ...+))
+                    (loop #'(S ...))]
+                   [else #f])]))
      #:with (pred Tmp ...) (generate-temporaries #'(Pred Id ...))
      #:with (False ...) (stx-map (λ (_) #'#f) #'(Id ...))
      #:do [(define-values (params clauses) (values '() '()))]
@@ -85,6 +96,7 @@
                        #,@(reverse clauses))])
         ))]
 
+    ;;nested single-valued in-filtered and in-mapped
     [[(Id:id) (~and S:expr
                     (~or* ((~literal in-filtered)
                            _
@@ -123,6 +135,7 @@
                             #,(k #'v)))
                   #,s)])])))]
 
+    ;;nested single-valued in-filtered
     [[(Id:id) ((~literal in-filtered) Pred:expr (~and S:expr ((~literal in-filtered) . _)))]
      #:with (pred v) (generate-temporaries #'(Pred v))
      (optimize
