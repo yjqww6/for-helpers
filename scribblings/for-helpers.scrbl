@@ -72,6 +72,26 @@ Helper macros for racket for macros to avoid temporary sequences.
              (cons a b))]
 }
 
+@defform[(in-filter&map proc sequence ...+)]{
+ Returns a sequence similar to
+ @racketblock[(in-generator
+               (let ([p proc])
+                 (for ([s sequence] ...)
+                   (let-values ([(ok x ...) (proc s ...)])
+                     (when ok
+                       (yield x ...))))))]
+ , without touching continuations or building intermediate sequences.
+ 
+ This macro cannot be used outside @racket[for] clauses.
+
+ @examples[#:eval my-evaluator
+           (for/list ([(a b) (in-filter&map (λ (a b)
+                                              (values (< a b) (+ a b) (- a b)))
+                                            (in-list '(1 3 5 -1))
+                                            (in-list '(6 4 2 0)))])
+             (cons a b))]
+}
+
 @section{Performance Notes}
 @(require (for-label racket/list))
 @(define in-filter-mapped #f)
