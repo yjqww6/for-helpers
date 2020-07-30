@@ -1,6 +1,6 @@
 #lang scribble/manual
-@require[@for-label["../main.rkt" syntax/unsafe/for-transform
-                    racket/base
+@require[@for-label["../main.rkt"
+                    racket/base syntax/unsafe/for-transform
                     racket/generator]
          racket/sandbox scribble/example racket/runtime-path]
 
