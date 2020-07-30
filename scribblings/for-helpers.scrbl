@@ -14,12 +14,14 @@ Helper macros for racket for macros to avoid temporary sequences.
 @section{APIs}
 
 @(define-runtime-path main "../main.rkt")
+@(define-runtime-path private/main "../private/main.rkt")
 @(define my-evaluator
    (parameterize ([sandbox-output 'string]
                   [sandbox-error-output 'string]
                   [sandbox-memory-limit 50])
      (make-evaluator 'racket/base
-                     #:requires (list 'racket/match main))))
+                     #:requires (list 'racket/match private/main main
+                                      '(for-syntax racket/base racket/pretty)))))
 
 @defform[(in-mapped proc sequence ...+)]{
  Returns a sequence similar to
@@ -73,11 +75,43 @@ Helper macros for racket for macros to avoid temporary sequences.
 @section{Performance Notes}
 @(require (for-label racket/list))
 @(define in-filter-mapped #f)
+@(define optimize #f)
 
 Due to the limitations of code structures of @racket[:do-in],
 these macros do not compose well without optimizations.
 This package does optimize nested forms, which should cover most use cases.
 See @italic{tests/bench.rkt}.
+
+@(my-evaluator
+  '(define-syntax-rule (optimize form)
+     (begin-for-syntax
+       (pretty-display
+        (syntax->datum
+         ((current-optimize)
+          #'form))))))
+@examples[#:eval my-evaluator
+          (optimize
+           [(a) (in-filtered positive?
+                             (in-filtered even?
+                                          (in-range -5 5)))])
+          (optimize
+           [(a) (in-mapped cons
+                           (in-mapped cons
+                                      (in-range 500)
+                                      (in-range 500 1000))
+                           (in-mapped cons
+                                      (in-range 1000 1500)
+                                      (in-range 1500 2000)))])
+
+          (optimize
+           [(a) (in-filtered
+                 odd?
+                 (in-mapped add1
+                            (in-filtered
+                             even?
+                             (in-mapped (λ (v) (* 2 v))
+                                        (in-range 10)))))])
+          ]
 
 Currently, there are no @racket[in-filter-mapped] like @racket[filter-map],
 since it expands to @racket[(in-filtered values (in-mapped _ ...))]
