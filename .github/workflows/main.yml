@@ -23,3 +23,5 @@ jobs:
         run: raco pkg install ../for-helpers/
       - name: Run Tests
         run: raco test -p for-helpers
+      - name: Run Bench
+        run: racket tests/bench.rkt
