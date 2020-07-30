@@ -1,11 +1,10 @@
 #lang racket/base
 (require syntax/parse syntax/stx racket/sequence
-         (for-template racket/base "main.rkt" "and-let.rkt")
+         (for-template racket/base "main.rkt")
          racket/control)
 
 (define mp (make-continuation-prompt-tag))
 (define mc (make-continuation-prompt-tag))
-(define key (make-continuation-mark-key))
 
 (define-syntax with-Ps
   (syntax-rules ()
