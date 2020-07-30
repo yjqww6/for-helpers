@@ -78,4 +78,14 @@
                  (λ (x) (+ 2 x))
                  (in-filtered odd? (in-range 1000)))))))])
      a))
+
+  (bench
+   (for ([(a b) (in-filtered <
+                             (in-mapped +
+                                        (in-mapped add1 (in-range 1000))
+                                        (in-mapped add1 (in-range 1000)))
+                             (in-mapped *
+                                        (in-mapped add1 (in-range 1000))
+                                        (in-mapped sub1 (in-range 1000))))])
+     (void)))
   )

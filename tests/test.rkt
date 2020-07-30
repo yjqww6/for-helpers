@@ -127,4 +127,19 @@
                      (filter odd?
                              (map (λ (x) (+ 2 x))
                                   (filter odd? (range 1000))))))))
+
+  (check-equal?
+   (for/list ([(a b) (in-filtered <
+                                  (in-mapped +
+                                             (in-mapped add1 (in-range 10))
+                                             (in-mapped add1 (in-range 10)))
+                                  (in-mapped *
+                                             (in-mapped add1 (in-range 10))
+                                             (in-mapped sub1 (in-range 10))))])
+     (cons a b))
+   (filter (λ (x)
+             (< (car x) (cdr x)))
+           (map cons
+                (map + (map add1 (range 10)) (map add1 (range 10)))
+                (map * (map add1 (range 10)) (map sub1 (range 10))))))
   )

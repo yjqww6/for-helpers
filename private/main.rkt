@@ -91,7 +91,7 @@
              )])])]
 
     [[(Id:id ...+) ((~literal in-filter&map) Proc S ...+)]
-     #:with (Tmp ...) (generate-temporaries #'(Id ...))
+     #:with (Tmp ...) (generate-temporaries #'(S ...))
      (syntax-parse (compose-single-valued #'(Tmp ...) #'(S ...))
        [(([(outer-id ...) outer-expr] ...)
          outer-check

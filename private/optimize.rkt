@@ -50,6 +50,41 @@
                                            #,(k procedure)))
                                  #,@(reverse clauses))])))]
 
+    [[(Id:id ...) ((~literal in-filtered) Pred:expr (~between S:expr 2 +inf.0) ...)]
+     #:when (for/or ([s (in-syntax #'(S ...))])
+              (syntax-parse s
+                [((~literal in-mapped) . _) #t]
+                [else #f]))
+     #:with (pred Tmp ...) (generate-temporaries #'(Pred Id ...))
+     #:with (False ...) (stx-map (λ (_) #'#f) #'(Id ...))
+     #:do [(define-values (params clauses) (values '() '()))]
+     (optimize
+      (with-Ps (mc mp)
+        (define (recur s)
+          (syntax-parse s
+            [((~literal in-mapped) Proc:expr S:expr ...+)
+             #:with (proc) (generate-temporaries #'(Proc))
+             (with-C ([k mp])
+               #`(let ([proc Proc])
+                   #,(with-Ps (mp)
+                       (k #`(proc #,@(stx-map recur #'(S ...)))))))]
+            [else
+             #:with (Tmp) (generate-temporaries #'(tmp))
+             (set! params (cons #'Tmp params))
+             (set! clauses (cons s clauses))
+             #'Tmp]))
+        (define l (stx-map recur #'(S ...)))
+        (with-C ([k mp] [kc mc])
+          #`[(Id ...) (in-filter&map
+                       (let ([pred Pred])
+                         #,(kc #`(λ #,(reverse params)
+                                   (let-values ([(Tmp ...) (values #,@(k l))])
+                                     (if (pred Tmp ...)
+                                         (values #t Tmp ...)
+                                         (values #f False ...))))))
+                       #,@(reverse clauses))])
+        ))]
+
     [[(Id:id) (~and S:expr
                     (~or* ((~literal in-filtered)
                            _
