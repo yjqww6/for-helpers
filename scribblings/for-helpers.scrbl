@@ -9,7 +9,7 @@
 
 @defmodule[for-helpers]
 
-Helper macros for racket for macros to avoid temporary sequences.
+Helper macros for racket/for.
 
 @section{APIs}
 
@@ -133,8 +133,7 @@ See @italic{tests/bench.rkt}.
                                         (in-range 10)))))])
           ]
 
-Currently, there are no @racket[in-filter-mapped] like @racket[filter-map],
-since it expands to @racket[(in-filtered values (in-mapped _ ...))]
-and there are no @italic{stop-ids} parameters for @racket[expand-for-clause] for partial expansion.
-Therefore it is not suggested to define something like @racket[in-filter-mapped]
-and then write @racket[(in-filtered _ (in-filter-mapped _ (in-mapped _ _)))].
+Currently, it is not suggested to define something like @racket[in-filter-mapped]
+as @racket[(in-filtered values (in-mapped _ ...))] using @racket[define-sequence-syntax],
+since there is no partial expansion support from @racket[expand-for-clause],
+which disables potential optimizations when nested.
