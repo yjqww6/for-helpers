@@ -1,5 +1,5 @@
 #lang scribble/manual
-@require[@for-label["../main.rkt"
+@require[@for-label["../main.rkt" "../extra.rkt"
                     racket/base syntax/unsafe/for-transform
                     racket/generator]
          racket/sandbox scribble/example racket/runtime-path]
@@ -7,11 +7,11 @@
 @title{for-helpers}
 @author{yjqww6}
 
-@defmodule[for-helpers]
-
 Helper macros for racket/for.
 
 @section{APIs}
+
+@defmodule[for-helpers]
 
 @(define-runtime-path main "../main.rkt")
 @(define-runtime-path private/main "../private/main.rkt")
@@ -71,6 +71,9 @@ Helper macros for racket/for.
                       [b (in-filtered even? (in-range 5))])
              (cons a b))]
 }
+@section{More APIs}
+
+@defmodule[for-helpers/extra]
 
 @defform[(in-filter&map proc sequence ...+)]{
  Returns a sequence similar to
