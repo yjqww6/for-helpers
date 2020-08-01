@@ -45,9 +45,13 @@
                                           (if post-guard
                                               (loop #f loop-arg ...)
                                               (values #f #f #f loop-id ...))
-                                          (values (unsafe-car tmp) (unsafe-cdr tmp)
-                                                  post-guard
-                                                  loop-arg ...)))
+                                          (if post-guard
+                                              (values (unsafe-car tmp) (unsafe-cdr tmp)
+                                                      #t
+                                                      loop-arg ...)
+                                              (values (unsafe-car tmp) (unsafe-cdr tmp)
+                                                      #f
+                                                      loop-id ...))))
                                     (values #f #f #f loop-id ...)))
                               (values #f #f #f loop-id ...)))
                         (values #f #f #f loop-id ...)))])
