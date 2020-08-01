@@ -1,10 +1,11 @@
 #lang racket/base
-(require (for-syntax racket/base syntax/parse racket/list
+(require (for-syntax racket/base syntax/parse
                      syntax/stx syntax/unsafe/for-transform
                      racket/sequence
-                     syntax/id-set
-                     "helper.rkt")
+                     syntax/id-set)
          racket/unsafe/ops)
+
+(provide in-lists)
 
 (define-sequence-syntax in-lists
   (syntax-rules ())
@@ -21,7 +22,7 @@
            pre-guard
            post-guard
            (loop-arg ...))
-          #:do [(define loop-set (for/fold ([b (immutable-bound-id-set)])
+          #:do [(define loop-set (for/fold ([b (immutable-bound-id-set (list #'x))])
                                            ([id (in-syntax #'(loop-id ...))])
                                    (bound-id-set-add b id)))]
           #:with (inner-loop-id ...) (filter (λ (id)
