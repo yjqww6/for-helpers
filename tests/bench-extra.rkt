@@ -1,5 +1,5 @@
 #lang racket/base
-(require "../extra.rkt")
+(require "../extra.rkt" racket/list)
 
 (module+ main
 
@@ -11,12 +11,12 @@
         (printf "~a: " case)
         (collect-garbage)
         (collect-garbage)
-        (time (for ([_ (in-range 1000000)]) form)))
+        (time (for ([_ (in-range 100000)]) form)))
       ...
       (newline)))
   
-  (define l '(((1 2 3) (4 5 6))
-              ((7 8 9) (a b c))))
+  (define l (list (list (range 50) (range 50))
+                  (list (range 50) (range 50) (range 50))))
 
   (bench "in-lists"
          ["append"
