@@ -24,4 +24,4 @@ jobs:
       - name: Run Tests
         run: raco test -p for-helpers
       - name: Run Bench
-        run: racket tests/bench.rkt
+        run: racket tests/bench.rkt &&  racket tests/bench-extra.rkt

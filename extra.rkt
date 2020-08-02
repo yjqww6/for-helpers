@@ -1,3 +1,3 @@
 #lang racket/base
-(require "private/main.rkt" (for-syntax "private/optimize.rkt"))
-(provide in-filter&map)
+(require "private/extra.rkt" "private/main.rkt")
+(provide (all-from-out "private/extra.rkt") in-filter&map)

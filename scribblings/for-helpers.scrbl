@@ -14,13 +14,14 @@ Helper macros for racket/for.
 @defmodule[for-helpers]
 
 @(define-runtime-path main "../main.rkt")
+@(define-runtime-path extra "../extra.rkt")
 @(define-runtime-path private/main "../private/main.rkt")
 @(define my-evaluator
    (parameterize ([sandbox-output 'string]
                   [sandbox-error-output 'string]
                   [sandbox-memory-limit 50])
      (make-evaluator 'racket/base
-                     #:requires (list 'racket/match private/main main
+                     #:requires (list 'racket/match private/main main extra
                                       '(for-syntax racket/base racket/pretty)))))
 
 @defform[(in-mapped proc sequence ...+)]{
@@ -93,6 +94,22 @@ Helper macros for racket/for.
                                             (in-list '(1 3 5 -1))
                                             (in-list '(6 4 2 0)))])
              (cons a b))]
+}
+
+@defform[(in-lists sequence)]{
+ Returns a sequence similar to
+ @racketblock[(in-generator
+               (for* ([s sequence]
+                      [x (in-list s)])
+                 (yield x)))]
+ , without touching continuations or building intermediate sequences.
+ 
+ This macro cannot be used outside @racket[for] clauses.
+
+ @examples[#:eval my-evaluator
+           (for/list ([x (in-lists (in-lists (in-list '(((1 2 3) (4 5 6))
+                                                        ((7 8 9) (a b c))))))])
+             x)]
 }
 
 @section{Performance Notes}
