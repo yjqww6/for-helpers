@@ -11,11 +11,8 @@
   (define (group id+ss)
     (syntax-parse id+ss
       [() '()]
-      [([Id:id S:expr] [Id* (~literal _)] ...+ . rest)
+      [([Id:id S:expr] [Id* (~literal _)] ... . rest)
        (cons (expand-for-clause #'S #'[(Id Id* ...) S])
-             (group #'rest))]
-      [([Id:id S:expr] . rest)
-       (cons (expand-for-clause #'S #'[(Id) S])
              (group #'rest))]))
   (with-syntax* ([(Id ...) ids]
                  [(S ...) ss]
