@@ -21,12 +21,18 @@
      (control-at p k (with-C r body ...))]))
 
 (define (optimize form)
+  (define (_-free? s)
+    (not
+     (for/or ([s (in-syntax s)])
+       (and (identifier? s)
+            (free-identifier=? s #'_)))))
   (syntax-parse form
     ;;nested in-mapped, multiple values handled
     [[(Id:id ...) ((~literal in-mapped) Proc:expr S:expr ...+)]
+     #:when (_-free? #'(S ...))
      #:when (for/or ([s (in-syntax #'(S ...))])
               (syntax-parse s
-                [((~literal in-mapped) . _) #t]
+                [((~literal in-mapped) Proc:expr (~not (~literal _)) ...+) #t]
                 [else #f]))
      #:with (proc) (generate-temporaries #'(Proc))
      #:do [(define-values (params clauses) (values '() '()))]
@@ -36,6 +42,7 @@
           (let recur ([s #'(in-mapped Proc S ...)])
             (syntax-parse s
               [((~literal in-mapped) Proc:expr S:expr ...+)
+               #:when (_-free? #'(S ...))
                #:with (proc) (generate-temporaries #'(Proc))
                (with-C ([k mp])
                  #`(let ([proc Proc])

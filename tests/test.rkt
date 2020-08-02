@@ -142,4 +142,23 @@
            (map cons
                 (map + (map add1 (range 10)) (map add1 (range 10)))
                 (map * (map add1 (range 10)) (map sub1 (range 10))))))
+
+
+  (check-equal?
+   (for/list ([a (in-mapped +
+                            (in-hash #hash((1 . 2)
+                                           (3 . 4)))
+                            _)])
+     a)
+   '(3 7))
+
+  (check-equal?
+   (for/list ([a (in-mapped values
+                            (in-mapped +
+                                       (in-mapped values
+                                                  '(1 2 3)
+                                                  '(4 5 6))
+                                       _))])
+     a)
+   '(5 7 9))
   )
