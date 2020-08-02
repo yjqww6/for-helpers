@@ -27,7 +27,7 @@
                  [y (in-list x)]
                  [z (in-list y)])
             z)]
-         ["nested inlists"
+         ["nested in-lists"
           (for ([x (in-lists (in-lists (in-list l)))])
             x)])
   )
