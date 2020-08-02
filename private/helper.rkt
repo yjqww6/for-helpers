@@ -2,15 +2,20 @@
 
 (require syntax/unsafe/for-transform
          racket/syntax syntax/stx
-         racket/sequence
+         racket/sequence syntax/parse
          (for-template racket/base))
 
 (provide (all-defined-out))
 
 (define (compose-single-valued ids ss)
+  (define (group id+ss)
+    (syntax-parse id+ss
+      [() '()]
+      [([Id:id S:expr] [Id* (~literal _)] ... . rest)
+       (cons (expand-for-clause #'S #'[(Id Id* ...) S])
+             (group #'rest))]))
   (with-syntax* ([(Id ...) ids]
                  [(S ...) ss]
-                 [(P ...) #'([(Id) S] ...)]
                  [[(([(outer-id ...) outer-expr] ...)
                     outer-check
                     ([loop-id loop-expr] ...)
@@ -20,7 +25,7 @@
                     post-guard
                     (loop-arg ...))
                    ...]
-                  (stx-map expand-for-clause #'(S ...) #'(P ...))])
+                  (group #'([Id S] ...))])
     #'(([(outer-id ...) outer-expr] ... ...)
        (begin outer-check ...)
        ([loop-id loop-expr] ... ...)

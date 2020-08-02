@@ -72,6 +72,52 @@ Helper macros for racket/for.
                       [b (in-filtered even? (in-range 5))])
              (cons a b))]
 }
+@subsection{Performance Notes}
+@(require (for-label racket/list))
+@(define in-filter-mapped #f)
+@(define optimize #f)
+
+Due to the limitations of code structures of @racket[:do-in],
+@racket[in-mapped] and @racket[in-filtered] do not compose well without optimizations.
+This package does optimize nested forms, which should cover most use cases.
+See @italic{tests/bench.rkt}.
+
+@(my-evaluator
+  '(define-syntax-rule (optimize form)
+     (begin-for-syntax
+       (pretty-display
+        (syntax->datum
+         ((current-optimize)
+          #'form))))))
+@examples[#:eval my-evaluator
+          (optimize
+           [(a) (in-filtered positive?
+                             (in-filtered even?
+                                          (in-range -5 5)))])
+          (optimize
+           [(a) (in-mapped cons
+                           (in-mapped cons
+                                      (in-range 500)
+                                      (in-range 500 1000))
+                           (in-mapped cons
+                                      (in-range 1000 1500)
+                                      (in-range 1500 2000)))])
+
+          (optimize
+           [(a) (in-filtered
+                 odd?
+                 (in-mapped add1
+                            (in-filtered
+                             even?
+                             (in-mapped (λ (v) (* 2 v))
+                                        (in-range 10)))))])
+          ]
+
+Currently, it is not suggested to define something like @racket[in-filter-mapped]
+as @racket[(in-filtered values (in-mapped _ ...))] using @racket[define-sequence-syntax],
+since there is no partial expansion support from @racket[expand-for-clause],
+which disables potential optimizations when nested.
+
 @section{More APIs}
 
 @defmodule[for-helpers/extra]
@@ -112,48 +158,17 @@ Helper macros for racket/for.
              x)]
 }
 
-@section{Performance Notes}
-@(require (for-label racket/list))
-@(define in-filter-mapped #f)
-@(define optimize #f)
-
-Due to the limitations of code structures of @racket[:do-in],
-these macros do not compose well without optimizations.
-This package does optimize nested forms, which should cover most use cases.
-See @italic{tests/bench.rkt}.
-
-@(my-evaluator
-  '(define-syntax-rule (optimize form)
-     (begin-for-syntax
-       (pretty-display
-        (syntax->datum
-         ((current-optimize)
-          #'form))))))
+@section{Composing Multiple Values}
+For forms supporting multiple sequence inputs, @italic{n} consecutive @racket[_] can be specified to indicating
+the followed sequence returns @italic{n+1} values.
 @examples[#:eval my-evaluator
-          (optimize
-           [(a) (in-filtered positive?
-                             (in-filtered even?
-                                          (in-range -5 5)))])
-          (optimize
-           [(a) (in-mapped cons
-                           (in-mapped cons
-                                      (in-range 500)
-                                      (in-range 500 1000))
-                           (in-mapped cons
-                                      (in-range 1000 1500)
-                                      (in-range 1500 2000)))])
-
-          (optimize
-           [(a) (in-filtered
-                 odd?
-                 (in-mapped add1
-                            (in-filtered
-                             even?
-                             (in-mapped (λ (v) (* 2 v))
-                                        (in-range 10)))))])
-          ]
-
-Currently, it is not suggested to define something like @racket[in-filter-mapped]
-as @racket[(in-filtered values (in-mapped _ ...))] using @racket[define-sequence-syntax],
-since there is no partial expansion support from @racket[expand-for-clause],
-which disables potential optimizations when nested.
+          (for/list ([a (in-mapped +
+                                   (in-hash #hash((1 . 2)
+                                                  (3 . 4)))
+                                   _)])
+            a)
+          (for/list ([(a b) (in-filtered (λ (a b) (odd? a))
+                                         (in-hash #hash((1 . 3)
+                                                        (2 . 4)))
+                                         _)])
+            (list a b))]
