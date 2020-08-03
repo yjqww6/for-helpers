@@ -1,11 +1,110 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse
                      syntax/stx syntax/unsafe/for-transform
-                     racket/sequence
+                     racket/sequence racket/list racket/syntax
                      syntax/id-set)
          racket/unsafe/ops)
 
-(provide in-lists)
+(provide in-lists in-nested)
+
+(define-for-syntax (remove-loop-ids loop-ids extra-ids)
+  (with-syntax ([(extra-loop-id ...)
+                 (remove-duplicates (append (syntax->list loop-ids)
+                                            (syntax->list extra-ids))
+                                    bound-identifier=?)])
+    (list-tail (syntax->list #'(extra-loop-id ...))
+               (length (syntax->list loop-ids)))))
+
+(define-sequence-syntax in-nested
+  (syntax-rules ())
+  (λ (stx)
+    (syntax-parse stx
+      [[(Id:id ...) (_ () S:expr)]
+       #'[(Id ...) S]]
+      [[(Id:id ...) (_ ([(I:id ...) S0:expr] rest ...) S:expr)]
+       #'[(Id ...) (in-nested1 (I ...) S0
+                               (in-nested (rest ...) S))]])))
+
+(define-sequence-syntax in-nested1
+  (syntax-rules ())
+  (λ (stx)
+    (syntax-parse stx
+      [[(Id:id ...) (_ (I:id ...) S0:expr S1:expr)]
+       #:with (([(outer-id0 ...) outer-expr0] ...)
+               outer-check0
+               ([loop-id0 loop-expr0] ...)
+               pos-guard0
+               ([(inner-id0 ...) inner-expr0] ...)
+               pre-guard0
+               post-guard0
+               (loop-arg0 ...))
+       (expand-for-clause #'S0 #'[(I ...) S0])
+       #:with (([(outer-id1 ...) outer-expr1] ...)
+               outer-check1
+               ([loop-id1 loop-expr1] ...)
+               pos-guard1
+               ([(inner-id1 ...) inner-expr1] ...)
+               pre-guard1
+               post-guard1
+               (loop-arg1 ...))
+       (expand-for-clause #'S1 #'[(Id ...) S1])
+       #:with (outer-loop-id1 ...)
+       (remove-loop-ids #'(loop-id1 ...) #'(outer-id1 ... ...))
+       #:with (inner-loop-id0 ...)
+       (remove-loop-ids #'(loop-id0 ...) #'(inner-id0 ... ...))
+       #:with (inner-loop-id1 ...)
+       (remove-loop-ids #'(loop-id1 ... outer-loop-id1 ...) #'(inner-id1 ... ...))
+       #:with (inner-id2 ...)
+       #'(inner-loop-id1 ... loop-id1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...)
+       #:with (falsy ...)
+       (stx-map (λ (_) #'#f) #'(inner-id2 ...))
+
+       #'[(Id ...)
+          (:do-in
+           ([(outer-id0 ...) outer-expr0] ...)
+           outer-check0
+           ([state #f] [loop-id1 #f] ... [outer-loop-id1 #f] ... [inner-loop-id0 #f] ... [loop-id0 loop-expr0] ...)
+           #t
+           ([(state inner-loop-id1 ... loop-id1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...)
+             (letrec ([loop (λ (loop-id0 ...)
+                              (if pos-guard0
+                                  (let-values ([(inner-id0 ...) inner-expr0] ...)
+                                    (if pre-guard0
+                                        (begin
+                                          (let-values ([(outer-id1 ...) outer-expr1] ...)
+                                            outer-check1
+                                            (let-values ([(loop-id1) loop-expr1] ...)
+                                              (if pos-guard1
+                                                  (let-values ([(inner-id1 ...) inner-expr1] ...)
+                                                    (if pre-guard1
+                                                        (values (if post-guard0 #t 'post) inner-id2 ...)
+                                                        (if post-guard0
+                                                            (loop loop-arg0 ...)
+                                                            (values #f falsy ...))))
+                                                  (loop loop-arg0 ...)))))
+                                        (values #f falsy ...)))
+                                  (values #f falsy ...)))])
+               (cond
+                 [(eq? state #t)
+                  (if pos-guard1
+                      (let-values ([(inner-id1 ...) inner-expr1] ...)
+                        (if pre-guard1
+                            (values #t inner-id2 ...)
+                            (loop loop-arg0 ...)))
+                      (loop loop-arg0 ...))]
+                 [(eq? state #f)
+                  (loop loop-id0 ...)]
+                 [else ;'post
+                  (if pos-guard1
+                      (let-values ([(inner-id1 ...) inner-expr1] ...)
+                        (if pre-guard1
+                            (values state inner-id2 ...)
+                            (values #f falsy ...)))
+                      (values #f falsy ...))]))])
+           state
+           #t
+           ((if post-guard1 state #f) loop-arg1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...)
+           )]])))
 
 (define-sequence-syntax in-lists
   (syntax-rules ())
