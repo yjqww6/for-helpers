@@ -176,6 +176,12 @@ which disables potential optimizations when nested.
              a)]
 }
 
+@subsection{Performance Notes for @racket[for-helpers/extra]}
+Benchmarks show in RacketCS, the performance of @racket[in-lists] is nearly optimal,
+and @racket[in-nested] is also reasonably good.
+But unfortunately, it seems RacketBC doesn't properly optimize these forms,
+which results in poor performance.
+
 @section{Composing Multiple Values}
 For forms supporting multiple sequence inputs, @italic{n} consecutive @racket[_] can be specified to indicating
 the followed sequence returns @italic{n+1} values.
