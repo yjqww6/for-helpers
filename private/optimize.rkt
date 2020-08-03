@@ -1,5 +1,5 @@
 #lang racket/base
-(require syntax/parse syntax/stx racket/sequence
+(require syntax/parse syntax/stx racket/sequence racket/syntax
          (for-template racket/base "main.rkt")
          racket/control)
 
@@ -41,9 +41,10 @@
         (define procedure
           (let recur ([s #'(in-mapped Proc S ...)])
             (syntax-parse s
-              [((~literal in-mapped) Proc:expr S:expr ...+)
+              [((~and (~literal in-mapped) Dis) Proc:expr S:expr ...+)
                #:when (_-free? #'(S ...))
                #:with (proc) (generate-temporaries #'(Proc))
+               (record-disappeared-uses #'Dis #f)
                (with-C ([k mp])
                  #`(let ([proc Proc])
                      #,(with-Ps (mp)
@@ -70,16 +71,18 @@
      (with-Ps (mc mp)
        (let loop ([s #'S] [tail #t])
          (syntax-parse s
-           [((~literal in-mapped) Proc:expr S:expr)
+           [((~and (~literal in-mapped) Dis) Proc:expr S:expr)
             #:with (proc) (generate-temporaries #'(Proc))
+            (record-disappeared-uses #'Dis #f)
             (with-C ([k mp])
               #`(let ([proc Proc])
                   #,(with-Ps (mp)
                       (if tail
                           (k #`(values #t (proc #,(loop #'S #f))))
                           (k #`(proc #,(loop #'S #f)))))))]
-           [((~literal in-filtered) Pred:expr S:expr)
+           [((~and (~literal in-filtered) Dis) Pred:expr S:expr)
             #:with (tmp pred) (generate-temporaries #'(tmp Pred))
+            (record-disappeared-uses #'Dis #f)
             (with-C ([k mp])
               #`(let ([pred Pred])
                   #,(with-Ps (mp)
@@ -104,8 +107,9 @@
       (with-Ps (mc mp)
         (let loop ([s #'(in-filtered Pred S)])
           (syntax-parse s
-            [((~literal in-filtered) Pred:expr S:expr)
+            [((~and (~literal in-filtered) Dis) Pred:expr S:expr)
              #:with (pred) (generate-temporaries #'(Pred))
+             (record-disappeared-uses #'Dis #f)
              (with-C ([k mp])
                #`(let ([pred Pred])
                    #,(with-Ps (mp)

@@ -1,8 +1,8 @@
 #lang racket/base
 
 (require syntax/unsafe/for-transform
-         racket/syntax syntax/stx
-         racket/sequence syntax/parse
+         racket/syntax
+         syntax/parse
          (for-template racket/base))
 
 (provide (all-defined-out))
@@ -11,8 +11,11 @@
   (define (group id+ss)
     (syntax-parse id+ss
       [() '()]
-      [([Id:id S:expr] [Id* (~literal _)] ... . rest)
-       (cons (expand-for-clause #'S #'[(Id Id* ...) S])
+      [([Id:id S:expr] [Id* (~and (~literal _) Dis)] ... . rest)
+       (record-disappeared-uses (syntax->list #'(Dis ...)) #f)
+       (define here (expand-for-clause #'S #'[(Id Id* ...) S]))
+       (record-disappeared-uses (or (syntax-property here 'disappeared-use) '()))
+       (cons here
              (group #'rest))]))
   (with-syntax* ([(Id ...) ids]
                  [(S ...) ss]
