@@ -17,7 +17,7 @@
       (stx-map syntax-local-introduce #'(s ...)))]))
 
 (define-for-syntax (expand stx)
-  (with-disappeared-uses (void)
+  (parameterize ([current-recorded-disappeared-uses '()])
     (syntax-parse ((current-optimize) stx)
       [[(Id:id ...) ((~literal in-mapped) Proc:expr S:expr ...+)]
        #:with (Temp ...) (generate-temporaries #'(S ...))
