@@ -72,7 +72,7 @@
             (:do-in
              ([(outer-id0 ...) outer-expr0] ...)
              (begin (for-disappeared Dis ...) outer-check0)
-             ;;state #f : uninit, 0 : ok, 1 : post-guard0 failed, 2 : loop0
+             ;;state #f : uninit, 0 : ok, 1 : post-guard0 failed, 2 : go
              ([state #f] [loop-id1 #f] ... [outer-loop-id1 #f] ... [inner-loop-id0 #f] ... [loop-id0 loop-expr0] ...)
              #t
              ([(state inner-loop-id1 ... loop-id1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...)
@@ -87,8 +87,6 @@
                  [else
                   (let go ([state state] [loop-id0 loop-id0] ...)
                     (cond
-                      [(not state)
-                       (go 2 loop-id0 ...)]
                       [(eq? state 0)
                        (if pos-guard1
                            (let-values ([(inner-id1 ...) inner-expr1] ...)
@@ -96,13 +94,6 @@
                                  (values 0 inner-id2 ...)
                                  (go 2 loop-arg0 ...)))
                            (go 2 loop-arg0 ...))]
-                      [(eq? state 1)
-                       (if pos-guard1
-                           (let-values ([(inner-id1 ...) inner-expr1] ...)
-                             (if pre-guard1
-                                 (values state inner-id2 ...)
-                                 (values #f falsy ...)))
-                           (values #f falsy ...))]
                       [(eq? state 2)
                        (if pos-guard0
                            (let-values ([(inner-id0 ...) inner-expr0] ...)
@@ -120,7 +111,9 @@
                                                      (values #f falsy ...))))
                                            (go 2 loop-arg0 ...)))))
                                  (values #f falsy ...)))
-                           (values #f falsy ...))]))])])
+                           (values #f falsy ...))]
+                      [else ;#f
+                       (go 2 loop-id0 ...)]))])])
              state
              #t
              ((if post-guard1 state #f) loop-arg1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...)
