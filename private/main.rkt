@@ -2,19 +2,12 @@
 
 (require (for-syntax racket/base syntax/parse racket/list
                      syntax/stx racket/syntax
-                     "helper.rkt"))
+                     "helper.rkt")
+         "common.rkt")
 (provide in-mapped in-filtered in-filter&map
          (for-syntax current-optimize))
 
 (define-for-syntax current-optimize (make-parameter values))
-
-(define-syntax (for-disappeared stx)
-  (syntax-case stx ()
-    [(_ s ...)
-     (syntax-property
-      #'(void)
-      'disappeared-use
-      (stx-map syntax-local-introduce #'(s ...)))]))
 
 (define-for-syntax (expand stx)
   (parameterize ([current-recorded-disappeared-uses '()])
