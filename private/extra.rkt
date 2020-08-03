@@ -12,15 +12,17 @@
   (λ (stx)
     (syntax-parse stx
       [[(Id:id) (_ S:expr)]
-       (syntax-parse (expand-for-clause #'S #'[(tmp) S])
-         [(([(outer-id ...) outer-expr] ...)
-           outer-check
-           ([loop-id loop-expr] ...)
-           pos-guard
-           ([(inner-id ...) inner-expr] ...)
-           pre-guard
-           #t
-           (loop-arg ...))
+       #:with (([(outer-id ...) outer-expr] ...)
+               outer-check
+               ([loop-id loop-expr] ...)
+               pos-guard
+               ([(inner-id ...) inner-expr] ...)
+               pre-guard
+               post-guard
+               (loop-arg ...))
+       (expand-for-clause #'S #'[(tmp) S])
+       (cond
+         [(eq? (syntax-e #'post-guard) #t)
           #'[(Id)
              (:do-in
               ([(outer-id ...) outer-expr] ...)
@@ -48,14 +50,7 @@
               rst
               #t
               (rst loop-id ...))]]
-         [(([(outer-id ...) outer-expr] ...)
-           outer-check
-           ([loop-id loop-expr] ...)
-           pos-guard
-           ([(inner-id ...) inner-expr] ...)
-           pre-guard
-           post-guard
-           (loop-arg ...))
+         [else
           #'[(Id)
              (:do-in
               ([(outer-id ...) outer-expr] ...)

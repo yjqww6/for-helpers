@@ -21,138 +21,140 @@
     (syntax-parse ((current-optimize) stx)
       [[(Id:id ...) ((~literal in-mapped) Proc:expr S:expr ...+)]
        #:with (Temp ...) (generate-temporaries #'(S ...))
-       (syntax-parse (compose-single-valued #'(Temp ...) #'(S ...))
-         [(([(outer-id ...) outer-expr] ...)
-           outer-check
-           ([loop-id loop-expr] ...)
-           pos-guard
-           ([(inner-id ...) inner-expr] ...)
-           pre-guard
-           post-guard
-           (loop-arg ...))
-          #:with (falsy ...) (map (λ (_) #'#f)
-                                  (syntax->list #'(Id ... inner-id ... ...)))
-          #:with (Disappeared ...) (or (current-recorded-disappeared-uses) '())
-          (for-clause-syntax-protect
-           #'[(Id ...)
-              (:do-in
-               ([(outer-id ...) outer-expr] ... [(proc) Proc])
-               (begin (for-disappeared Disappeared ...) outer-check)
+       #:with (([(outer-id ...) outer-expr] ...)
+               outer-check
                ([loop-id loop-expr] ...)
                pos-guard
-               ([(ok Id ... inner-id ... ...)
-                 (let-values ([(inner-id ...) inner-expr] ...)
-                   (if pre-guard
-                       (let-values ([(Id ...) (proc Temp ...)])
-                         (values #t Id ... inner-id ... ...))
-                       (values #f falsy ...)))])
-               ok
+               ([(inner-id ...) inner-expr] ...)
+               pre-guard
                post-guard
-               (loop-arg ...)
-               )])])]
+               (loop-arg ...))
+       (compose-single-valued #'(Temp ...) #'(S ...))
+       #:with (falsy ...) (map (λ (_) #'#f)
+                               (syntax->list #'(Id ... inner-id ... ...)))
+       #:with (Disappeared ...) (or (current-recorded-disappeared-uses) '())
+       (for-clause-syntax-protect
+        #'[(Id ...)
+           (:do-in
+            ([(outer-id ...) outer-expr] ... [(proc) Proc])
+            (begin (for-disappeared Disappeared ...) outer-check)
+            ([loop-id loop-expr] ...)
+            pos-guard
+            ([(ok Id ... inner-id ... ...)
+              (let-values ([(inner-id ...) inner-expr] ...)
+                (if pre-guard
+                    (let-values ([(Id ...) (proc Temp ...)])
+                      (values #t Id ... inner-id ... ...))
+                    (values #f falsy ...)))])
+            ok
+            post-guard
+            (loop-arg ...)
+            )])]
       [[(Id:id ...+) ((~literal in-filtered) Proc S ...+)]
-       (syntax-parse (compose-single-valued #'(Id ...) #'(S ...))
-         [(([(outer-id ...) outer-expr] ...)
-           outer-check
-           ([loop-id loop-expr] ...)
-           pos-guard
-           ([(inner-id ...) inner-expr] ...)
-           pre-guard
-           post-guard
-           (loop-arg ...))
-          #:with (inner-loop-id ...) (remove-duplicates (syntax->list #'(inner-id ... ... loop-id ...))
-                                                        bound-identifier=?)
-          #:with (falsy ...) (stx-map (λ (_) #'#f) #'(inner-loop-id ...))
-          #:with (next) (generate-temporaries '(next))
-          #:with (Disappeared ...) (or (current-recorded-disappeared-uses) '())
-          (for-clause-syntax-protect
-           #'[(Id ...)
-              (:do-in
-              
-               ([(next outer-id ... ...)
-                 (let-values ([(outer-id ...) outer-expr] ...
-                              [(proc) Proc])
-                   (define (next loop-id ...)
-                     (if pos-guard
-                         (let-values ([(inner-id ...) inner-expr] ...)
-                           (if pre-guard
-                               (if (proc Id ...)
-                                   (values #t inner-loop-id ...)
-                                   (if post-guard
-                                       (next loop-arg ...)
-                                       (values #f falsy ...)))
-                               (values #f falsy ...)))
-                         (values #f falsy ...)))
-                   outer-check
-                   (values next outer-id ... ...))])
-
-               (for-disappeared Disappeared ...)
-
+       #:with (([(outer-id ...) outer-expr] ...)
+               outer-check
                ([loop-id loop-expr] ...)
-
-               #t
-
-               ([(ok inner-loop-id ...) (next loop-id ...)])
-
-               ok
-
+               pos-guard
+               ([(inner-id ...) inner-expr] ...)
+               pre-guard
                post-guard
+               (loop-arg ...))
+       (compose-single-valued #'(Id ...) #'(S ...))
+       
+       #:with (inner-loop-id ...) (remove-duplicates (syntax->list #'(inner-id ... ... loop-id ...))
+                                                     bound-identifier=?)
+       #:with (falsy ...) (stx-map (λ (_) #'#f) #'(inner-loop-id ...))
+       #:with (next) (generate-temporaries '(next))
+       #:with (Disappeared ...) (or (current-recorded-disappeared-uses) '())
+       (for-clause-syntax-protect
+        #'[(Id ...)
+           (:do-in
+              
+            ([(next outer-id ... ...)
+              (let-values ([(outer-id ...) outer-expr] ...
+                           [(proc) Proc])
+                (define (next loop-id ...)
+                  (if pos-guard
+                      (let-values ([(inner-id ...) inner-expr] ...)
+                        (if pre-guard
+                            (if (proc Id ...)
+                                (values #t inner-loop-id ...)
+                                (if post-guard
+                                    (next loop-arg ...)
+                                    (values #f falsy ...)))
+                            (values #f falsy ...)))
+                      (values #f falsy ...)))
+                outer-check
+                (values next outer-id ... ...))])
 
-               (loop-arg ...)
-               )])])]
+            (for-disappeared Disappeared ...)
+
+            ([loop-id loop-expr] ...)
+
+            #t
+
+            ([(ok inner-loop-id ...) (next loop-id ...)])
+
+            ok
+
+            post-guard
+
+            (loop-arg ...)
+            )])]
 
       [[(Id:id ...+) ((~literal in-filter&map) Proc S ...+)]
        #:with (Tmp ...) (generate-temporaries #'(S ...))
-       (syntax-parse (compose-single-valued #'(Tmp ...) #'(S ...))
-         [(([(outer-id ...) outer-expr] ...)
-           outer-check
-           ([loop-id loop-expr] ...)
-           pos-guard
-           ([(inner-id ...) inner-expr] ...)
-           pre-guard
-           post-guard
-           (loop-arg ...))
-          #:with (inner-loop-id ...) (remove-duplicates (syntax->list #'(Id ... inner-id ... ... loop-id ...))
-                                                        bound-identifier=?)
-          #:with (falsy ...) (stx-map (λ (_) #'#f) #'(inner-loop-id ...))
-          #:with (ok next) (generate-temporaries '(ok next))
-          #:with (Disappeared ...) (or (current-recorded-disappeared-uses) '())
-          (for-clause-syntax-protect
-           #'[(Id ...)
-              (:do-in
-              
-               ([(next outer-id ... ...)
-                 (let-values ([(outer-id ...) outer-expr] ...
-                              [(proc) Proc])
-                   (define (next loop-id ...)
-                     (if pos-guard
-                         (let-values ([(inner-id ...) inner-expr] ...)
-                           (if pre-guard
-                               (let-values ([(ok Id ...) (proc Tmp ...)])
-                                 (if ok
-                                     (values #t inner-loop-id ...)
-                                     (if post-guard
-                                         (next loop-arg ...)
-                                         (values #f falsy ...))))
-                               (values #f falsy ...)))
-                         (values #f falsy ...)))
-                   outer-check
-                   (values next outer-id ... ...))])
-
-               (for-disappeared Disappeared ...)
-
+       #:with (([(outer-id ...) outer-expr] ...)
+               outer-check
                ([loop-id loop-expr] ...)
-
-               #t
-
-               ([(done inner-loop-id ...) (next loop-id ...)])
-
-               done
-
+               pos-guard
+               ([(inner-id ...) inner-expr] ...)
+               pre-guard
                post-guard
+               (loop-arg ...))
+       (compose-single-valued #'(Tmp ...) #'(S ...))
+       
+       #:with (inner-loop-id ...) (remove-duplicates (syntax->list #'(Id ... inner-id ... ... loop-id ...))
+                                                     bound-identifier=?)
+       #:with (falsy ...) (stx-map (λ (_) #'#f) #'(inner-loop-id ...))
+       #:with (ok next) (generate-temporaries '(ok next))
+       #:with (Disappeared ...) (or (current-recorded-disappeared-uses) '())
+       (for-clause-syntax-protect
+        #'[(Id ...)
+           (:do-in
+              
+            ([(next outer-id ... ...)
+              (let-values ([(outer-id ...) outer-expr] ...
+                           [(proc) Proc])
+                (define (next loop-id ...)
+                  (if pos-guard
+                      (let-values ([(inner-id ...) inner-expr] ...)
+                        (if pre-guard
+                            (let-values ([(ok Id ...) (proc Tmp ...)])
+                              (if ok
+                                  (values #t inner-loop-id ...)
+                                  (if post-guard
+                                      (next loop-arg ...)
+                                      (values #f falsy ...))))
+                            (values #f falsy ...)))
+                      (values #f falsy ...)))
+                outer-check
+                (values next outer-id ... ...))])
 
-               (loop-arg ...)
-               )])])]
+            (for-disappeared Disappeared ...)
+
+            ([loop-id loop-expr] ...)
+
+            #t
+
+            ([(done inner-loop-id ...) (next loop-id ...)])
+
+            done
+
+            post-guard
+
+            (loop-arg ...)
+            )])]
       )))
 
 (define-sequence-syntax in-mapped
