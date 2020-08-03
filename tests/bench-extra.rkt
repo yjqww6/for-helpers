@@ -29,5 +29,10 @@
             z)]
          ["nested in-lists"
           (for ([x (in-lists (in-lists (in-list l)))])
+            x)]
+         ["in-nested"
+          (for ([x (in-nested ([(a) (in-list l)]
+                               [(b) (in-list a)])
+                              (in-list b))])
             x)])
   )

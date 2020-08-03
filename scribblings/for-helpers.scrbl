@@ -158,6 +158,24 @@ which disables potential optimizations when nested.
              x)]
 }
 
+@defform[(in-nested ([(s ...) sequences] ...) sequence)]{
+ Returns a sequence similar to
+ @racketblock[(in-generator
+               (for* ([(s ...) sequences] ...
+                      [(x ...) sequence])
+                 (yield x ...)))]
+ , without touching continuations or building intermediate sequences.
+ 
+ This macro cannot be used outside @racket[for] clauses.
+
+ @examples[#:eval my-evaluator
+           (for/list ([a (in-nested
+                          ([(b) (in-list '((0) (1 2 3) (4 5)))]
+                           [(x) (in-list b)])
+                          (in-range x))])
+             a)]
+}
+
 @section{Composing Multiple Values}
 For forms supporting multiple sequence inputs, @italic{n} consecutive @racket[_] can be specified to indicating
 the followed sequence returns @italic{n+1} values.
