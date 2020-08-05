@@ -59,4 +59,11 @@
                   (in-value a))])
      x)
    '(0))
+
+  (check-equal?
+   (let ([a 1])
+     (for/list ([x (in-nested ([(a) (in-range 1)])
+                              (in-value a))])
+       a))
+   '(1))
   )

@@ -31,8 +31,9 @@
     (parameterize ([current-recorded-disappeared-uses '()])
       (syntax-parse stx
         [[(Id:id ...) (_ (I:id ...) S0:expr S1:expr)]
-         #:do [(define s0 (expand-for-clause #'S0 #'[(I ...) S0]))
-               (define s1 (expand-for-clause #'S1 #'[(Id ...) S1]))
+         #:do [(define intro (make-syntax-introducer #t))
+               (define s0 (expand-for-clause #'S0 #`[#,(intro #'(I ...)) S0]))
+               (define s1 (expand-for-clause #'S1 #`[(Id ...) #,(intro #'S1)]))
                (record-disappeared-uses
                 (or (syntax-property s0 'disappeared-use) '()))
                (record-disappeared-uses
