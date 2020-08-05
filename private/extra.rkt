@@ -63,6 +63,8 @@
          (remove-loop-ids #'(loop-id1 ... outer-loop-id1 ...) #'(inner-id1 ... ...))
          #:with (inner-id2 ...)
          #'(inner-loop-id1 ... loop-id1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...)
+         #:with (inner-arg2 ...)
+         #'(inner-loop-id1 ... loop-id1 ... outer-loop-id1 ... inner-loop-id0 ... loop-arg0 ...)
          #:with (falsy ...)
          (stx-map (λ (_) #'#f) #'(inner-id2 ...))
          #:with (Dis ...) (current-recorded-disappeared-uses)
@@ -73,7 +75,7 @@
              (begin (for-disappeared Dis ...) outer-check0)
              ([state #f] [loop-id1 #f] ... [outer-loop-id1 #f] ... [inner-loop-id0 #f] ... [loop-id0 loop-expr0] ...)
              #t
-             ([(state inner-loop-id1 ... loop-id1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...)
+             ([(state inner-id2 ...)
                (letrec ([loop (λ (loop-id0 ...)
                                 (if pos-guard0
                                     (let-values ([(inner-id0 ...) inner-expr0] ...)
@@ -85,7 +87,7 @@
                                                 (if pos-guard1
                                                     (let-values ([(inner-id1 ...) inner-expr1] ...)
                                                       (if pre-guard1
-                                                          (values (if post-guard0 #t 'post) inner-id2 ...)
+                                                          (values (if post-guard0 #t 'post) inner-arg2 ...)
                                                           (if post-guard0
                                                               (loop loop-arg0 ...)
                                                               (values #f falsy ...))))
@@ -98,8 +100,8 @@
                         (let-values ([(inner-id1 ...) inner-expr1] ...)
                           (if pre-guard1
                               (values #t inner-id2 ...)
-                              (loop loop-arg0 ...)))
-                        (loop loop-arg0 ...))]
+                              (loop loop-id0 ...)))
+                        (loop loop-id0 ...))]
                    [(eq? state #f)
                     (loop loop-id0 ...)]
                    [else ;'post

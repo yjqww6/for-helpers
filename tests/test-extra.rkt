@@ -52,4 +52,11 @@
                   (in-list b))])
      a)
    '(0 0 1 2 3 1 2 3 4 5 4 5))
+
+  (check-equal?
+   (for/list ([x (in-nested
+                  ([(a) (in-range 1)])
+                  (in-value a))])
+     x)
+   '(0))
   )
