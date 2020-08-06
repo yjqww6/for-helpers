@@ -174,6 +174,7 @@ which disables potential optimizations when nested.
                            [(x) (in-list b)])
                           (in-range x))])
              a)]
+ @bold{Warning:} This macro may bloat your code.
 }
 
 @subsection{Performance Notes for @racket[for-helpers/extra]}
