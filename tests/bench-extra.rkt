@@ -34,7 +34,14 @@
           (for ([x (in-nested ([(a) (in-list l)]
                                [(b) (in-list a)])
                               (in-list b))])
-            x)])
+            x)]
+         ["loop"
+          (begin
+            (local-require "../loop.rkt")
+            (loop loop ([x (in-nested ([(a) (in-list l)]
+                                       [(b) (in-list a)])
+                                      (in-list b))])
+                  (loop)))])
 
   (define hs (list (for/hash ([i (in-range 50)])
                      (values i (range i)))
@@ -53,5 +60,13 @@
                                [(k l) (in-hash h)]
                                [(i) (in-list l)])
                               (in-value i))])
-            v)])
+            v)]
+         ["loop"
+          (begin
+            (local-require "../loop.rkt")
+            (loop loop ([v (in-nested ([(h) (in-list hs)]
+                                       [(k l) (in-hash h)]
+                                       [(i) (in-list l)])
+                                      (in-value i))])
+                  (loop)))])
   )

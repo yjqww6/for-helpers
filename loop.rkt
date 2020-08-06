@@ -1,7 +1,8 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse
                      racket/sequence racket/syntax
-                     syntax/unsafe/for-transform))
+                     syntax/unsafe/for-transform
+                     racket/list))
 
 (provide define-loop-syntax loop in-mapped in-filtered)
 
@@ -37,7 +38,9 @@
                                  (λ () #f)))]
              #:when (and proc (loop-syntax? proc))
              #:do [(define intro (make-syntax-introducer))
-                   (define-values (loop-ids
+                   (define-values (outer-ids
+                                   loop-ids
+                                   inner-ids
                                    outer-setup
                                    inner-setup
                                    loop-setup)
@@ -47,12 +50,16 @@
                       (case-lambda
                         [(s) (syntax-parse s
                                [cl:clause
-                                (values #'(cl.loop-id ...)
+                                (values #'(cl.outer-id ...)
+                                        #'(cl.loop-id ...)
+                                        #'(cl.inner-id ...)
                                         (attribute cl.outer-setup)
                                         (attribute cl.inner-setup)
                                         (attribute cl.loop-setup))])]
-                        [(a b c d) (values a b c d)])))]
+                        [(a b c d e f) (values a b c d e f)])))]
+             #:with (outer-id ...) (intro outer-ids)
              #:with (loop-id ...) (intro loop-ids)
+             #:with (inner-id ...) (intro inner-ids)
              #:attr outer-setup
              (λ (outer) (intro (outer-setup (intro outer))))
              #:attr inner-setup
@@ -66,25 +73,27 @@
     
     (pattern (~and S [x:ids s:expr])
              #:with
-             (([(outer-id ...) outer-expr] ...)
+             (([(outer-id^ ...) outer-expr] ...)
               outer-check
               ([loop-id loop-expr] ...)
               pos-guard
-              ([(inner-id ...) inner-expr] ...)
+              ([(inner-id^ ...) inner-expr] ...)
               pre-guard
               post-guard
               (loop-arg ...))
              (expand-for-clause #'S #'[(x.id ...) s])
+             #:with (outer-id ...) #'(outer-id^ ... ...)
+             #:with (inner-id ...) #'(inner-id^ ... ...)
              #:attr outer-setup
              (λ (outer)
-               #`(let-values ([(outer-id ...) outer-expr] ...)
+               #`(let-values ([(outer-id^ ...) outer-expr] ...)
                    outer-check
                    (let ([loop-id loop-expr] ...)
                      #,outer)))
              #:attr inner-setup
              (λ (inner done)
                #`(if pos-guard
-                     (let-values ([(inner-id ...) inner-expr] ...)
+                     (let-values ([(inner-id^ ...) inner-expr] ...)
                        (if pre-guard
                            #,inner
                            #,done))
@@ -96,6 +105,58 @@
                        #,loop)
                      #,done)))
     ))
+
+(define-loop-syntax (in-nested stx)
+  (syntax-parse stx
+    [[x:ids (_ () S:expr)]
+     #'[x S]]
+    [[x:ids (_ ([x0:ids S0:expr] r ...) S:expr)]
+     #'[x (in-nested1 x0 S0 (in-nested (r ...) S))]]))
+
+(define-loop-syntax (in-nested1 stx)
+  (syntax-parse stx
+    [[x:ids (_ I:ids S0:expr S1:expr)]
+     #:with cl0:clause #'[I S0]
+     #:with cl1:clause #'[x S1]
+     #:with (loop-id ...) (remove-duplicates
+                           (syntax->list #'(cl1.loop-id ... cl1.outer-id ... cl0.inner-id ...))
+                           bound-identifier=?)
+     #:with (inner-id ...) #'(cl1.inner-id ...)
+     #:with init? (generate-temporary 'init)
+     (values #'(cl0.outer-id ...)
+             #'(init? loop-id ... cl0.loop-id ...)
+             #'(init? cl1.inner-id ...)
+             (λ (outer)
+               ((attribute cl0.outer-setup)
+                #`(let ([init? #f] [loop-id #f] ...)
+                    #,outer)))
+             (λ (inner done)
+               #`(letrec ([outer-loop (λ (cl0.loop-id ...)
+                                        #,((attribute cl0.inner-setup)
+                                           ((attribute cl1.outer-setup)
+                                            #`(let inner-loop ([cl1.loop-id cl1.loop-id] ...)
+                                                #,((attribute cl1.inner-setup)
+                                                   #`(let ([init? #t])
+                                                       #,inner)
+                                                   ((attribute cl0.loop-setup)
+                                                    #`(outer-loop cl0.loop-id ...)
+                                                    done))))
+                                           done))])
+                   (if (not init?)
+                       (outer-loop cl0.loop-id ...)
+                       #,((attribute cl1.inner-setup)
+                          inner
+                          ((attribute cl0.loop-setup)
+                           #`(outer-loop cl0.loop-id ...)
+                           done)))))
+             (λ (loop done)
+               ((attribute cl1.loop-setup)
+                loop
+                ((attribute cl0.loop-setup)
+                 #`(let ([init? #f])
+                     #,loop)
+                 done))))
+     ]))
 
 (define-loop-syntax (in-mapped stx)
   (syntax-parse stx
@@ -112,7 +173,9 @@
                         (map (λ (f) (λ (loop) (f loop done)))
                              (attribute ls.loop-setup)))
                  loop))]
-        (values #'(ls.loop-id ... ...)
+        (values #'(p ls.outer-id ... ...)
+                #'(ls.loop-id ... ...)
+                #'(x.id ... ls.inner-id ... ...)
                 (λ (outer)
                   #`(let ([p proc])
                       #,(outer-setup outer)))
@@ -137,7 +200,9 @@
                         (map (λ (f) (λ (loop) (f loop done)))
                              (attribute ls.loop-setup)))
                  loop))]
-        (values #'(ls.loop-id ... ...)
+        (values #'(p ls.outer-id ... ...)
+                #'(ls.loop-id ... ...)
+                #'(ls.inner-id ... ...)
                 (λ (outer)
                   #`(let ([p proc])
                       #,(outer-setup outer)))
