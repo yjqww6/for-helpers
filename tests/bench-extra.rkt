@@ -35,4 +35,23 @@
                                [(b) (in-list a)])
                               (in-list b))])
             x)])
+
+  (define hs (list (for/hash ([i (in-range 50)])
+                     (values i (range i)))
+                   (for/hash ([i (in-range 50)])
+                     (values i (range i)))))
+
+  (bench "bench2"
+         ["for*"
+          (for* ([h (in-list hs)]
+                 [(k l) (in-hash h)]
+                 [i (in-list l)]
+                 [v (in-value i)])
+            i)]
+         ["in-nested"
+          (for ([v (in-nested ([(h) (in-list hs)]
+                               [(k l) (in-hash h)]
+                               [(i) (in-list l)])
+                              (in-value i))])
+            v)])
   )
