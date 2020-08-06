@@ -33,10 +33,18 @@
                  ((~or < > unsafe-fx< unsafe-fx>) y:id _:expr))
              #:when (free-identifier=? #'x #'y)])
   (syntax-parse pos-guard #:literals (null? not pair?)
+    [#t
+     #:when (not (null? loop-ids))
+     #:with uninit (syntax-local-lift-expression #'(gensym 'uninit))
+     (values (car loop-ids)
+             #`(not (eq? #,(car loop-ids) uninit))
+             (cons #'uninit (map (λ (_) #'#f) (cdr loop-ids))))]
     [x:id
      #:when (for/or ([id (in-list loop-ids)])
               (free-identifier=? id #'x))
-     (values (car loop-ids)
+     (values (for/first ([id (in-list loop-ids)]
+                         #:when (free-identifier=? id #'x))
+               id)
              pos-guard
              (map (λ (_) #'#f) loop-ids))]
     
