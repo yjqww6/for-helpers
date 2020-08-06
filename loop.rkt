@@ -14,6 +14,13 @@
      #'(define-loop-syntax name (λ r body ...))]))
 
 (begin-for-syntax
+  (define (group id+ss)
+    (syntax-parse id+ss
+      [() '()]
+      [([(Id:id) S:expr] [(Id*:id) (~and (~literal _) Dis)] ... . rest)
+       (cons #'[(Id Id* ...) S]
+             (group #'rest))]))
+  
   (struct loop-syntax (name proc)
     #:property prop:procedure
     (λ (self stx)
@@ -94,7 +101,7 @@
   (syntax-parse stx
     [[x:ids (_ proc:expr ls:expr ...+)]
      #:with (tmp ...) (generate-temporaries #'(ls ...))
-     (syntax-parse #'([(tmp) ls] ...)
+     (syntax-parse (group #'([(tmp) ls] ...))
        [(ls:clause ...+)
         #:do [(define outer-setup (apply compose1 (attribute ls.outer-setup)))
               (define (inner-setup inner done)
@@ -119,7 +126,7 @@
 (define-loop-syntax (in-filtered stx)
   (syntax-parse stx
     [[x:ids (_ proc:expr ls:expr ...+)]
-     (syntax-parse #'([(x.id) ls] ...)
+     (syntax-parse (group #'([(x.id) ls] ...))
        [(ls:clause ...)
         #:do [(define outer-setup (apply compose1 (attribute ls.outer-setup)))
               (define (inner-setup inner done)
