@@ -116,6 +116,10 @@
          #'(inner-loop-id1 ... loop-id1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...)
          #:with (inner-arg2 ...)
          #'(inner-loop-id1 ... loop-id1 ... outer-loop-id1 ... inner-loop-id0 ... loop-arg0 ...)
+         #:with (inner1-ctx ...)
+         (remove-duplicates
+          (syntax->list #'(loop-id1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...))
+          bound-identifier=?)
          #:with (falsy ...)
          (stx-map (λ (_) #'#f) #'(Tmp ... inner-id2 ...))
          #:with (Dis ...) (current-recorded-disappeared-uses)
@@ -137,7 +141,17 @@
                 ([loop-id1 loop-init1] ... [outer-loop-id1 #f] ... [inner-loop-id0 #f] ... [loop-id0 loop-expr0] ...)
                 #t
                 ([(Id ... inner-id2 ...)
-                  (letrec ([loop
+                  (letrec ([calc-inner1
+                            (λ (go? inner1-ctx ...)
+                              (let-values ([(inner-id1 ...) inner-expr1] ...)
+                                (if go?
+                                    (if pre-guard1
+                                        (values Tmp ... inner-id2 ...)
+                                        (loop loop-id0 ...))
+                                    (if pre-guard1
+                                        (values Tmp ... inner-arg2 ...)
+                                        (loop loop-arg0 ...)))))]
+                           [loop
                             (λ (loop-id0 ...)
                               (if pos-guard0
                                   (let-values ([(inner-id0 ...) inner-expr0] ...)
@@ -147,19 +161,13 @@
                                             outer-check1
                                             (let-values ([(loop-id1) loop-expr1] ...)
                                               (if pos-guard1
-                                                  (let-values ([(inner-id1 ...) inner-expr1] ...)
-                                                    (if pre-guard1
-                                                        (values Tmp ... inner-arg2 ...)
-                                                        (loop loop-arg0 ...)))
+                                                  (calc-inner1 #f inner1-ctx ...)
                                                   (loop loop-arg0 ...)))))
                                         (values falsy ...)))
                                   (values falsy ...)))])
                     (cond
                       [#,new-pos-guard1
-                       (let-values ([(inner-id1 ...) inner-expr1] ...)
-                         (if pre-guard1
-                             (values Tmp ... inner-id2 ...)
-                             (loop loop-id0 ...)))]
+                       (calc-inner1 #t inner1-ctx ...)]
                       [else
                        (loop loop-id0 ...)]))])
                 #,omit-state?
@@ -177,7 +185,17 @@
                 ([state #f] [loop-id1 #f] ... [outer-loop-id1 #f] ... [inner-loop-id0 #f] ... [loop-id0 loop-expr0] ...)
                 #t
                 ([(state Id ... inner-id2 ...)
-                  (letrec ([loop
+                  (letrec ([calc-inner1
+                            (λ (go? inner1-ctx ...)
+                              (let-values ([(inner-id1 ...) inner-expr1] ...)
+                                (if go?
+                                    (if pre-guard1
+                                        (values #t Tmp ... inner-id2 ...)
+                                        (loop loop-id0 ...))
+                                    (if pre-guard1
+                                        (values #t Tmp ... inner-arg2 ...)
+                                        (loop loop-arg0 ...)))))]
+                           [loop
                             (λ (loop-id0 ...)
                               (if pos-guard0
                                   (let-values ([(inner-id0 ...) inner-expr0] ...)
@@ -187,19 +205,13 @@
                                             outer-check1
                                             (let-values ([(loop-id1) loop-expr1] ...)
                                               (if pos-guard1
-                                                  (let-values ([(inner-id1 ...) inner-expr1] ...)
-                                                    (if pre-guard1
-                                                        (values #t Tmp ... inner-arg2 ...)
-                                                        (loop loop-arg0 ...)))
+                                                  (calc-inner1 #f inner1-ctx ...)
                                                   (loop loop-arg0 ...)))))
                                         (values #f falsy ...)))
                                   (values #f falsy ...)))])
                     (cond
                       [(and state pos-guard1)
-                       (let-values ([(inner-id1 ...) inner-expr1] ...)
-                         (if pre-guard1
-                             (values #t Tmp ... inner-id2 ...)
-                             (loop loop-id0 ...)))]
+                       (calc-inner1 #t inner1-ctx ...)]
                       [else
                        (loop loop-id0 ...)]))])
                 state
@@ -217,7 +229,23 @@
                 ([state #f] [loop-id1 #f] ... [outer-loop-id1 #f] ... [inner-loop-id0 #f] ... [loop-id0 loop-expr0] ...)
                 #t
                 ([(state Id ... inner-id2 ...)
-                  (letrec ([loop
+                  (letrec ([calc-inner1
+                            (λ (go? inner1-ctx ...)
+                              (let-values ([(inner-id1 ...) inner-expr1] ...)
+                                (if go?
+                                    (if pre-guard1
+                                        (values state Tmp ... inner-id2 ...)
+                                        (if (eq? go? 'post)
+                                            (values #f falsy ...)
+                                            (loop loop-id0 ...)))
+                                    (if pre-guard1
+                                        (if post-guard0
+                                            (values #t Tmp ... inner-arg2 ...)
+                                            (values 'post Tmp ... inner-id2 ...))
+                                        (if post-guard0
+                                            (loop loop-arg0 ...)
+                                            (values #f falsy ...))))))]
+                           [loop
                             (λ (loop-id0 ...)
                               (if pos-guard0
                                   (let-values ([(inner-id0 ...) inner-expr0] ...)
@@ -227,33 +255,20 @@
                                             outer-check1
                                             (let-values ([(loop-id1) loop-expr1] ...)
                                               (if pos-guard1
-                                                  (let-values ([(inner-id1 ...) inner-expr1] ...)
-                                                    (if pre-guard1
-                                                        (if post-guard0
-                                                            (values #t Tmp ... inner-arg2 ...)
-                                                            (values 'post Tmp ... inner-id2 ...))
-                                                        (if post-guard0
-                                                            (loop loop-arg0 ...)
-                                                            (values #f falsy ...))))
+                                                  (calc-inner1 #f inner1-ctx ...)
                                                   (loop loop-arg0 ...)))))
                                         (values #f falsy ...)))
                                   (values #f falsy ...)))])
                     (cond
                       [(eq? state #t)
                        (if pos-guard1
-                           (let-values ([(inner-id1 ...) inner-expr1] ...)
-                             (if pre-guard1
-                                 (values #t Tmp ... inner-id2 ...)
-                                 (loop loop-id0 ...)))
+                           (calc-inner1 #t inner1-ctx ...)
                            (loop loop-id0 ...))]
                       [(eq? state #f)
                        (loop loop-id0 ...)]
                       [else ;'post
                        (if pos-guard1
-                           (let-values ([(inner-id1 ...) inner-expr1] ...)
-                             (if pre-guard1
-                                 (values state Tmp ... inner-id2 ...)
-                                 (values #f falsy ...)))
+                           (calc-inner1 'post inner1-ctx ...)
                            (values #f falsy ...))]))])
                 state
                 #t
