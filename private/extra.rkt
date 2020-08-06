@@ -127,7 +127,9 @@
                                       (if pos-guard1
                                           (let-values ([(inner-id1 ...) inner-expr1] ...)
                                             (if pre-guard1
-                                                (values (if post-guard0 #t 'post) inner-arg2 ...)
+                                                (if post-guard0
+                                                    (values #t inner-arg2 ...)
+                                                    (values 'post inner-id2 ...))
                                                 (if post-guard0
                                                     (loop loop-arg0 ...)
                                                     (values #f falsy ...))))

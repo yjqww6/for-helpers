@@ -1,5 +1,6 @@
 #lang racket/base
-(require "../extra.rkt")
+(require "../extra.rkt" (for-syntax racket/base))
+
 
 (module+ test
   (require rackunit racket/list racket/match)
@@ -66,4 +67,31 @@
                               (in-value a))])
        a))
    '(1))
+  
+  (check-equal?
+   (let ()
+     (define-sequence-syntax *in-list
+       (syntax-rules ())
+       (lambda (stx)
+         (syntax-case stx (list)
+           [[(id) (_ lst-expr)]
+            (for-clause-syntax-protect
+             #'[(id)
+                (:do-in
+                 ([(lst) lst-expr])
+                 (void)
+                 ([lst lst])
+                 (pair? lst)
+                 ([(id) (car lst)]
+                  [(rest) (cdr lst)])
+                 #t
+                 (not (= (caar id) 7))
+                 ((begin (cddr rest) rest)))])]
+           [_ #f])))
+     (for/list ([x (in-nested ([(a) 
+                                (*in-list
+                                 '(((1 2 3)) ((4 5 6)) ((7 8 9)) ()))])
+                              (in-list (car a)))])
+       x))
+   '(1 2 3 4 5 6 7 8 9))
   )
