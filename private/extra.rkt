@@ -25,6 +25,52 @@
        #'[(Id ...) (in-nested1 (I ...) S0
                                (in-nested (rest ...) S))]])))
 
+(define-for-syntax (try-omit-state loop-ids pos-guard)
+  (define-syntax-class compare #:literals (if < > unsafe-fx< unsafe-fx>)
+    [pattern ((~or < > unsafe-fx< unsafe-fx>) x:id _:expr)]
+    [pattern (if _:expr
+                 ((~or < > unsafe-fx< unsafe-fx>) x:id _:expr)
+                 ((~or < > unsafe-fx< unsafe-fx>) y:id _:expr))
+             #:when (free-identifier=? #'x #'y)])
+  (syntax-parse pos-guard #:literals (null? not pair?)
+    [#t
+     #:when (not (null? loop-ids))
+     (values (car loop-ids)
+             pos-guard
+             (map (λ (_) #'#f) loop-ids))]
+    [x:id
+     #:when (for/or ([id (in-list loop-ids)])
+              (free-identifier=? id #'x))
+     (values (car loop-ids)
+             pos-guard
+             (map (λ (_) #'#f) loop-ids))]
+    
+    [(~or (pair? x:id)
+          (not (null? x:id)))
+     #:when (for/or ([id (in-list loop-ids)])
+              (free-identifier=? id #'x))
+     (values (for/first ([id (in-list loop-ids)]
+                         #:when (free-identifier=? id #'x))
+               id)
+             pos-guard
+             (for/list ([id (in-list loop-ids)])
+               (if (free-identifier=? id #'x)
+                   #''()
+                   #'#f)))]
+    
+    [e:compare
+     #:when (for/or ([id (in-list loop-ids)])
+              (free-identifier=? id #'e.x))
+     #:with x (for/first ([id (in-list loop-ids)]
+                          #:when (free-identifier=? id #'e.x))
+                id)
+     (values #'x
+             #`(and x #,pos-guard)
+             (map (λ (_) #'#f) loop-ids))]
+    
+    [else
+     (values #f pos-guard (map (λ (_) #'#f) loop-ids))]))
+
 (define-sequence-syntax in-nested1
   (syntax-rules ())
   (λ (stx)
@@ -69,8 +115,52 @@
          #:with (falsy ...)
          (stx-map (λ (_) #'#f) #'(inner-id2 ...))
          #:with (Dis ...) (current-recorded-disappeared-uses)
+         
+         ;; first case
+         #:do [(define-values (omit-state? new-pos-guard1 new-loop-inits)
+                 (try-omit-state (syntax->list #'(loop-id1 ...)) #'pos-guard1))]
+         #:with (loop-init1 ...) new-loop-inits
+         ;; end first case
 
          (cond
+           [(and (eq? (syntax-e #'post-guard0) #t)
+                 (eq? (syntax-e #'post-guard1) #t)
+                 omit-state?)
+            #`[(Id ...)
+               (:do-in
+                ([(outer-id0 ...) outer-expr0] ...)
+                (begin (for-disappeared Dis ...) outer-check0)
+                ([loop-id1 loop-init1] ... [outer-loop-id1 #f] ... [inner-loop-id0 #f] ... [loop-id0 loop-expr0] ...)
+                #t
+                ([(inner-id2 ...)
+                  (letrec ([loop (λ (loop-id0 ...)
+                                   (if pos-guard0
+                                       (let-values ([(inner-id0 ...) inner-expr0] ...)
+                                         (if pre-guard0
+                                             (begin
+                                               (let-values ([(outer-id1 ...) outer-expr1] ...)
+                                                 outer-check1
+                                                 (let-values ([(loop-id1) loop-expr1] ...)
+                                                   (if pos-guard1
+                                                       (let-values ([(inner-id1 ...) inner-expr1] ...)
+                                                         (if pre-guard1
+                                                             (values inner-arg2 ...)
+                                                             (loop loop-arg0 ...)))
+                                                       (loop loop-arg0 ...)))))
+                                             (values falsy ...)))
+                                       (values falsy ...)))])
+                    (cond
+                      [#,new-pos-guard1
+                       (let-values ([(inner-id1 ...) inner-expr1] ...)
+                         (if pre-guard1
+                             (values inner-id2 ...)
+                             (loop loop-id0 ...)))]
+                      [else
+                       (loop loop-id0 ...)]))])
+                #,omit-state?
+                #t
+                (loop-arg1 ... outer-loop-id1 ... inner-loop-id0 ... loop-id0 ...)
+                )]]
            [(eq? (syntax-e #'post-guard0) #t)
             #'[(Id ...)
                (:do-in
