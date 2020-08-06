@@ -4,7 +4,7 @@
                      syntax/unsafe/for-transform
                      racket/list))
 
-(provide define-loop-syntax loop in-mapped in-filtered)
+(provide define-loop-syntax loop in-mapped in-filtered in-nested)
 
 (define-syntax (define-loop-syntax stx)
   (syntax-parse stx
