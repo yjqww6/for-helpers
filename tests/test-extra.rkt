@@ -94,14 +94,7 @@
                               (in-list (car a)))])
        x))
    '(1 2 3 4 5 6 7 8 9))
-
-  (λ (hs)
-    (for ([v (in-nested ([(h) (in-list hs)]
-                         [(k v) (in-hash h)]
-                         [(l) (in-list v)])
-                        (in-value l))])
-      v))
-  #;
+  
   (define-namespace-anchor ns)
   #;
   (check-not-exn
