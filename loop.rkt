@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse
                      racket/sequence racket/syntax
                      syntax/unsafe/for-transform
-                     racket/list))
+                     racket/list "private/depends.rkt"))
 
 (provide define-loop-syntax loop in-mapped in-filtered in-nested)
 
@@ -116,20 +116,26 @@
 (define-loop-syntax (in-nested1 stx)
   (syntax-parse stx
     [[x:ids (_ I:ids S0:expr S1:expr)]
-     #:with cl0:clause #'[I S0]
-     #:with cl1:clause #'[x S1]
+     #:with cl0:clause (syntax/loc stx [I S0])
+     #:with cl1:clause (syntax/loc stx [x S1])
+     #:with (cl0.loop-setup.depends ...)
+     (find-depends (remove-duplicates (syntax->list #'(cl0.inner-id ... cl0.loop-id ...))
+                                      bound-identifier=?)
+                   ((attribute cl0.loop-setup) #'(void) #'(void))
+                   (syntax->list #'(cl0.outer-id ...)))
      #:with (loop-id ...) (remove-duplicates
-                           (syntax->list #'(cl1.loop-id ... cl1.outer-id ... cl0.inner-id ...))
+                           (syntax->list #'(cl1.loop-id ... cl1.outer-id ... I.id ... cl0.loop-setup.depends ...))
                            bound-identifier=?)
      #:with (inner-id ...) #'(cl1.inner-id ...)
      #:with init? (generate-temporary 'init)
      (values #'(cl0.outer-id ...)
-             #'(init? loop-id ... cl0.loop-id ...)
+             #'(init? loop-id ...)
              #'(init? cl1.inner-id ...)
              (λ (outer)
-               ((attribute cl0.outer-setup)
-                #`(let ([init? #f] [loop-id #f] ...)
-                    #,outer)))
+               #`(let ([loop-id #f] ...)
+                   #,((attribute cl0.outer-setup)
+                      #`(let ([init? #f] [loop-id loop-id] ...)
+                          #,outer))))
              (λ (inner done)
                #`(letrec ([outer-loop (λ (cl0.loop-id ...)
                                         #,((attribute cl0.inner-setup)
